@@ -1,6 +1,7 @@
 ﻿namespace BinarySerializer
 {
-    using System.IO;
+    using System;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Represents a class that is capable of serializing an object graph to a byte stream. 
@@ -8,73 +9,186 @@
     public interface IBinarySerializationWriter
     {
         /// <summary>
+        /// Writes a <see cref="ushort"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="ushort"/> value to write.</param>
+        void Write(ushort value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="ushort"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="ushort"/> value to write.</param>
+        void Write(ushort? value);
+
+        /// <summary>
+        /// Writes a <see cref="short"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="short"/> value to write.</param>
+        void Write(short value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="short"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="short"/> value to write.</param>
+        void Write(short? value);
+
+        /// <summary>
+        /// Writes a <see cref="uint"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="uint"/> value to write.</param>
+        void Write(uint value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="uint"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="uint"/> value to write.</param>
+        void Write(uint? value);
+
+        /// <summary>
         /// Writes a <see cref="int"/> value to the current stream.
         /// </summary>
         /// <param name="value">The <see cref="int"/> value to write.</param>
         void Write(int value);
 
         /// <summary>
+        /// Writes a nullable <see cref="int"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="int"/> value to write.</param>
+        void Write(int? value);
+
+        /// <summary>
+        /// Writes a <see cref="ulong"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="ulong"/> value to write.</param>
+        void Write(ulong value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="ulong"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="ulong"/> value to write.</param>
+        void Write(ulong? value);
+
+        /// <summary>
+        /// Writes a <see cref="long"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="long"/> value to write.</param>
+        void Write(long value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="long"/> value to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="long"/> value to write.</param>
+        void Write(long? value);
+
+        /// <summary>
         /// Writes an <see cref="byte"/> to the current stream.
         /// </summary>
         /// <param name="value">The <see cref="byte"/> value to write.</param>
         void Write(byte value);
-    }
 
-    public class BinarySerializationWriter : IBinarySerializationWriter
-    {
-        private readonly Stream stream;
+        /// <summary>
+        /// Writes an <see cref="byte"/> array to the current stream.
+        /// </summary>
+        /// <param name="bytes">The <see cref="byte"/> array to write.</param>
+        void Write(byte[] bytes);
 
-        public BinarySerializationWriter(Stream stream)
-        {
-            this.stream = stream;
-        }
+        /// <summary>
+        /// Writes a nullable <see cref="byte"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="byte"/> value to write.</param>
+        void Write(byte? value);
+     
+        /// <summary>
+        /// Writes an <see cref="decimal"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="decimal"/> value to write.</param>
+        void Write(decimal value);
 
-        public void Write(int value)
-        {
-            Write7BitEncodedSigned32BitValue(value);
-        }
+        /// <summary>
+        /// Writes a nullable <see cref="decimal"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="decimal"/> value to write.</param>
+        void Write(decimal? value);
 
-        public void Write(byte value)
-        {
-            stream.WriteByte(value);
-        }
+        /// <summary>
+        /// Writes an <see cref="float"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="float"/> value to write.</param>
+        void Write(float value);
 
-        private void Write7BitEncodedSigned32BitValue(int value)
-        {
-            // Same as Math.Abs(value), only faster
-            int absoluteValue = (value ^ (value >> 31)) - (value >> 31);
+        /// <summary>
+        /// Writes a nullable <see cref="float"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="float"/> value to write.</param>
+        void Write(float? value);
 
-            // Get the first six bits from the first byte
-            var firstByte = (byte)(absoluteValue & 0x3f);
+        /// <summary>
+        /// Writes an <see cref="double"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="double"/> value to write.</param>
+        void Write(double value);
 
-            // Use the seventh bit to indicate a negative number
-            if (value < 0)
-            {
-                firstByte = (byte)(firstByte | 0x40);
-            }
+        /// <summary>
+        /// Writes a nullable <see cref="double"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="double"/> value to write.</param>
+        void Write(double? value);
 
-            if (absoluteValue >= 0x40)
-            {
-                // Indicate that the are a byte following this one when reading.
-                firstByte = (byte)(firstByte | 0x80);
-            }
+        /// <summary>
+        /// Writes an <see cref="Guid"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="Guid"/> value to write.</param>
+        void Write(Guid value);
 
-            stream.WriteByte(firstByte);
-            absoluteValue >>= 6;
+        /// <summary>
+        /// Writes a nullable <see cref="Guid"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="Guid"/> value to write.</param>
+        void Write(Guid? value);
 
-            // Continue to write the remaining bytes until the value can fit within 7 bytes.
-            while (absoluteValue >= 0x80)
-            {
-                var bytetowrite = (byte)(absoluteValue | 0x80);
-                stream.WriteByte(bytetowrite);
-                absoluteValue >>= 7;
-            }
+        /// <summary>
+        /// Writes an <see cref="DateTime"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="DateTime"/> value to write.</param>
+        void Write(DateTime value);
 
-            // write the last byte            
-            if (absoluteValue > 0)
-            {
-                stream.WriteByte((byte)absoluteValue);
-            }
-        }
+        /// <summary>
+        /// Writes a nullable <see cref="DateTime"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="DateTime"/> value to write.</param>
+        void Write(DateTime? value);
+
+        /// <summary>
+        /// Writes a <see cref="bool"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="bool"/> value to write.</param>
+        void Write(bool value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="bool"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The nullable <see cref="bool"/> value to write.</param>
+        void Write(bool? value);
+
+        /// <summary>
+        /// Writes a <see cref="string"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="string"/> value to write.</param>
+        void Write(string value);
+
+        /// <summary>
+        /// Writes an object to the current stream.
+        /// </summary>        
+        /// <param name="value">The object to write.</param>
+        void Write<T>(T value);
+
+        
+
+        ///// <summary>
+        ///// Writes an <see cref="ICollection{T}"/> to the current stream.
+        ///// </summary>
+        ///// <typeparam name="T">The type of the elements in the collection.</typeparam>
+        ///// <param name="collection">The <see cref="ICollection{T}"/> to write.</param>
+        //void WriteCollection<T>(ICollection<T> collection);
     }
 }

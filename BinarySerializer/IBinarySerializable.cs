@@ -6,15 +6,15 @@
     public interface IBinarySerializable
     {
         /// <summary>
-        /// Allows an object to serialize its own data using the <paramref name="binarySerializationWriter"/>
+        /// Allows an object to serialize its own data using the <paramref name="writer"/>
         /// </summary>
-        /// <param name="binarySerializationWriter">The <see cref="IBinarySerializationWriter"/> that is used to serialize the data.</param>
-        void Serialize(IBinarySerializationWriter binarySerializationWriter);
+        /// <param name="writer">The <see cref="IBinarySerializationWriter"/> that is used to serialize the data.</param>
+        void Serialize(IBinarySerializationWriter writer);
 
         /// <summary>
-        /// Allows an object to deserialize its own data using the <paramref name="binarySerializationReader"/>
+        /// Allows an object to deserialize its own data using the <paramref name="reader"/>
         /// </summary>
-        /// <param name="binarySerializationReader">The <see cref="IBinarySerializationReader"/> that is used to deserialize the object graph.</param>
-        void Deserialize(IBinarySerializationReader binarySerializationReader);
+        /// <param name="reader">The <see cref="IBinarySerializationReader"/> that is used to deserialize the object graph.</param>
+        void Deserialize(IBinarySerializationReader reader);
     }
 }

@@ -32,6 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -41,10 +42,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinarySerializationReader.cs" />
+    <Compile Include="BinarySerializationWriter.cs" />
+    <Compile Include="Configuration\SerializerOptions.cs" />
+    <Compile Include="DateTimeBitVectorSections.cs" />
+    <Compile Include="EnumHelper.cs" />
     <Compile Include="IBinarySerializable.cs" />
     <Compile Include="IBinarySerializationReader.cs" />
     <Compile Include="IBinarySerializationWriter.cs" />
+    <Compile Include="IStringCompressor.cs" />
+    <Compile Include="ObjectWriter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ObjectReader.cs" />
+    <Compile Include="ReaderMethods.cs" />
+    <Compile Include="TypeCode.cs" />
+    <Compile Include="TypeExtensions.cs" />
+    <Compile Include="TypeHelper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

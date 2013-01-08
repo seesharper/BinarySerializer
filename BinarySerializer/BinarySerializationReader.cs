@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
+    using System.Runtime.Serialization.Formatters.Binary;
     using System.Security;
     using System.Text;
     using BinarySerializer.Configuration;
@@ -16,6 +17,7 @@
         private readonly byte[] buffer = new byte[0x10];
         
         private readonly IDictionary<ulong, string> stringCache = new Dictionary<ulong, string>();
+        private readonly IDictionary<ulong, object> objectCache = new Dictionary<ulong, object>();
         private Encoding encoding;
         private readonly IDictionary<byte,Delegate> ReadMethods = new Dictionary<byte, Delegate>();
         private readonly SerializerOptions options = new SerializerOptions();
@@ -287,9 +289,7 @@
         {
             return ReadBoolean() ? (byte?)null : this.ReadByte();
         }
-
         
-
         /// <summary>
         /// Reads the next <see cref="decimal"/> from the current stream.
         /// </summary>
@@ -441,8 +441,7 @@
             if (stringValue == null)
             {
                 byte[] stringBuffer;
-                
-                
+                                
                 // Check the first bit to determine if the string is compressed.
                 if ((metadata & 0x1) == 0x1)
                 {
@@ -480,12 +479,45 @@
                 var readMethod = this.GetObjectReadMethod(typeCode);
                 return (T)readMethod();
             }
-
-            
-
-
-            
         }
+
+        /// <summary>
+        /// Reads the next <see cref="IBinarySerializable"/> object from the current stream.
+        /// </summary>
+        /// <typeparam name="T">The type of object to be returned from the stream.</typeparam>
+        /// <returns>The next <see cref="IBinarySerializable"/> object read from the current stream.</returns>
+        public T ReadBinarySerializeableObject<T>() where T : IBinarySerializable
+        {
+            var token = ReadUInt64();
+            if (token == 0)
+            {
+                return default(T);
+            }
+
+            object value;
+            if (!objectCache.TryGetValue(token, out value))
+            {                
+                value = Activator.CreateInstance(TypeHelper.GetType(ReadString()));
+                objectCache.Add(token, value);
+                ((IBinarySerializable)value).Deserialize(this);
+            }
+
+            return (T)value;
+        }
+
+        private object ReadSerializableObject()
+        {
+            ulong token = ReadUInt64();
+            object value;
+            if (!objectCache.TryGetValue(token, out value))
+            {
+                var binaryFormatter = new BinaryFormatter();
+                value = binaryFormatter.Deserialize(stream);
+                objectCache.Add(token, value);
+            }
+            return value;
+        }
+
 
         private Delegate GetReadMethod(byte typeCode)
         {
@@ -495,15 +527,22 @@
                 return readMethod;
             }
 
-            throw new NotSupportedException();
+
+            Func<object> d = this.ReadSerializableObject;
+            return d;
         }
 
          private Func<object> GetObjectReadMethod(byte typeCode)
          {
-             if (typeCode == 1)
+             if (typeCode == TypeCodes.Byte)
              {
                  Func<object> method = () => (object)ReadByte();
                  return method;
+             }
+
+             if (typeCode == TypeCodes.Serializable)
+             {
+                 return ReadSerializableObject;                 
              }
 
              throw new NotSupportedException();

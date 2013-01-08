@@ -19,9 +19,14 @@
     {
         public const byte Null = 0x0;
         public const byte Byte = 0x1;
-        
-        public const byte BinarySerializable = 0x11;
-        public const byte Object = 0x11;
 
+        public const byte Serializable = 0x9;
+        public const byte BinarySerializable = 0x11;
+
+        
+        public static bool RequiresTypeInformation(byte typeCode)
+        {
+            return typeCode > 0x10;
+        }
     }
 }

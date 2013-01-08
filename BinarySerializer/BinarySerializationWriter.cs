@@ -7,6 +7,7 @@
     using System.IO;
     using System.Reflection;
     using System.Reflection.Emit;
+    using System.Runtime.Serialization.Formatters.Binary;
     using System.Text;
 
     using BinarySerializer.Configuration;
@@ -23,7 +24,7 @@
         private readonly byte[] buffer = new byte[0x10];
 
         private readonly Dictionary<string, ulong> stringCache = new Dictionary<string, ulong>();
-        private readonly IDictionary<object, int> objectCache = new Dictionary<object, int>();
+        private readonly IDictionary<object, ulong> objectCache = new Dictionary<object, ulong>();
 
         private readonly Encoding encoding;
 
@@ -717,20 +718,24 @@
                 }
             }                        
         }
-
-        private Action<object> GetObjectWriteMethod(Type type)
+              
+        private void WriteSerializeableObject(object value)
         {
-            if (type == typeof(byte))
+            ulong token;
+            if (objectCache.TryGetValue(value, out token))
             {
-                return value => WriteByte((byte)value);
-                //return value => Write<byte>((byte)value);
+                Write(token);
             }
-            throw new NotSupportedException();
+            else
+            {
+                token = (ulong)objectCache.Count + 1;
+                objectCache.Add(value, token);
+                Write(token);
+                var binaryFormatter = new BinaryFormatter();
+                binaryFormatter.Serialize(stream, value);
+            }            
         }
-        
-
-
-
+       
         private Delegate GetWriteMethod(Type type) 
         {
             
@@ -770,9 +775,19 @@
             //    return method;             
             //}
 
-            throw new NotSupportedException();
+            Action<object> d = this.WriteSerializeableObject;
+            return d;
         }
 
+        private Action<object> GetObjectWriteMethod(Type type)
+        {
+            if (type == typeof(byte))
+            {
+                return value => WriteByte((byte)value);                               
+            }
+
+            return this.WriteSerializeableObject;
+        }
 
         public void Write<T>(T value) 
         {
@@ -782,11 +797,10 @@
             }
             else
             {
-                Action writeMethod;
-                
+                Action writeMethod;                
                 Type elementType = typeof(T);
                 if (elementType.IsSealed)
-                {
+                {                    
                     writeMethod = () => ((Action<T>)GetWriteMethod(elementType))(value);
                 }
                 else
@@ -809,6 +823,31 @@
             }            
         }
 
+        public void Write(IBinarySerializable value)
+        {
+            if (value == null)
+            {
+                Write((ulong)0);
+            }
+            else
+            {
+                ulong token;
+                if (objectCache.TryGetValue(value, out token))
+                {
+                    Write(token);
+                }
+                else
+                {
+                    token = (ulong)objectCache.Count + 1;
+                    objectCache.Add(value, token);
+                    Write(token);
+                    Write(value.GetType().AssemblyQualifiedName);
+                    value.Serialize(this);
+                    Type t
+                }           
+            }
+        }
+
         public bool RequiresTypeInformation(byte typeCode)
         {
             return typeCode > 0x10;
@@ -822,31 +861,13 @@
                 return TypeCodes.Byte;
             }
 
-            if (type == typeof(object))
-            {
-                return TypeCodes.Object;
-            }
-            throw new NotSupportedException();
+            
+            return TypeCodes.Serializable;
+            
         }
 
-        private void WriteCachedObject<T>(T value, Action<T> writeMethod)
-        {
-            int token;
-            if (objectCache.TryGetValue(value, out token))
-            {
-                Write(token);
-            }
-            else
-            {
-                token = objectCache.Count + 1;
-                objectCache.Add(value, token);
-                Write(token);
-            }
-        }
-
-
-
-        private void WriteBinarySerializable<T>(T value) where T :class, IBinarySerializable
+     
+        private void WriteBinarySerializable<T>(T value) where T : IBinarySerializable
         {                        
             Write(TypeCode.BinarySerializable);                
             value.Serialize(this);            

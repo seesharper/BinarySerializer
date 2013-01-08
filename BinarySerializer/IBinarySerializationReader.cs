@@ -181,6 +181,12 @@
         /// <returns>The next object read from the current stream.</returns>
         T ReadObject<T>();
 
-        
+        /// <summary>
+        /// Reads the next <see cref="IBinarySerializable"/> object from the current stream.
+        /// </summary>
+        /// <typeparam name="T">The type of object to be returned from the stream.</typeparam>
+        /// <returns>The next <see cref="IBinarySerializable"/> object read from the current stream.</returns>
+        T ReadBinarySerializeableObject<T>() where T : IBinarySerializable;
+
     }
 }

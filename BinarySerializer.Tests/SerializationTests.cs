@@ -550,6 +550,33 @@ namespace BinarySerializer.Tests
             Assert.AreEqual(Text.LoremIpsum, GetReader().ReadString());        
         }
 
+        [TestMethod]
+        public void Write_SerializeableObject_CanBeRead()
+        {
+            SerializableClass serializableClass = new SerializableClass() { Value = "SomeValue" };    
+            GetWriter().Write(serializableClass);
+            SerializableClass result = GetReader().ReadObject<SerializableClass>();
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void Write_SealedSerializeableObject_CanBeRead()
+        {
+            SealedSerializableClass serializableClass = new SealedSerializableClass() { Value = "SomeValue" };
+            GetWriter().Write(serializableClass);
+            var result = GetReader().ReadObject<SealedSerializableClass>();
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void Write_BinarySerializeableObject_CanBeRead()
+        {
+            BinarySerializableClass serializableClass = new BinarySerializableClass() { Value = "SomeValue" };
+            GetWriter().Write(serializableClass);
+            BinarySerializableClass result = GetReader().ReadObject<BinarySerializableClass>();
+            Assert.IsNotNull(result);
+        }
+
 
         [TestMethod]
         public void Experimental()

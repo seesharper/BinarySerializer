@@ -182,13 +182,23 @@
         /// <param name="value">The object to write.</param>
         void Write<T>(T value);
 
-        
+        /// <summary>
+        /// Writes an object that implements the <see cref="IBinarySerializable"/> interface to the current stream.
+        /// </summary>
+        /// <param name="value">The object to write.</param>
+        void Write(IBinarySerializable value);
+
+        /// <summary>
+        /// Writes a <see cref="Type"/> object to the current stream.
+        /// </summary>
+        /// <param name="type"></param>
+        void Write(Type type);
 
         ///// <summary>
         ///// Writes an <see cref="ICollection{T}"/> to the current stream.
         ///// </summary>
         ///// <typeparam name="T">The type of the elements in the collection.</typeparam>
         ///// <param name="collection">The <see cref="ICollection{T}"/> to write.</param>
-        //void WriteCollection<T>(ICollection<T> collection);
+        //void Write<T>(ICollection<T> collection);
     }
 }

@@ -435,7 +435,7 @@
             }
             else
             {
-                int length = (int)bytes.Length;
+                int length = bytes.Length;
                 ulong metadata = (ulong)length << 1;
                 Write(metadata);
                 stream.Write(bytes, 0, length);
@@ -805,6 +805,10 @@
             {
                 Action writeMethod;                
                 Type elementType = typeof(T);
+
+                var wm = this.CreateWriteMethod<T>(value.GetType());
+                wm(value, this);
+
                 if (elementType.IsSealed)
                 {                    
                     writeMethod = () => ((Action<T>)GetWriteMethod(elementType))(value);
@@ -827,6 +831,30 @@
                 }
                 writeMethod();                
             }            
+        }
+
+        private Action<T, BinarySerializationWriter> CreateWriteMethod<T>(Type actualType)
+        {
+            var dynamicMethod = new DynamicMethod("DynamicMethod", typeof(void), new[]{typeof(T), typeof(BinarySerializationWriter)}, typeof(BinarySerializationWriter).Module);
+            ILGenerator il = dynamicMethod.GetILGenerator();
+            var methodInfo = this.GetWriteMethodInfo(actualType);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldarg_0);            
+            il.Emit(OpCodes.Unbox, actualType);
+            il.Emit(OpCodes.Call, methodInfo);
+            il.Emit(OpCodes.Ret);
+            return (Action<T, BinarySerializationWriter>)dynamicMethod.CreateDelegate(typeof(Action<T, BinarySerializationWriter>));
+        }
+
+
+        private MethodInfo GetWriteMethodInfo(Type type)
+        {
+            if (type == typeof(byte))
+            {
+                return typeof(BinarySerializationWriter).GetMethod("Write", new[] { typeof(byte) });
+
+            }
+            throw new NotSupportedException();
         }
 
         public void WriteBinarySerializableObject(IBinarySerializable value)

@@ -174,7 +174,7 @@
         }
 
         [TestMethod]
-        public void DeflateStreamVsNoCompression()
+        public void DeflateSt   reamVsNoCompression()
         {            
             byte[] bytesToCompress = Encoding.Default.GetBytes(Text.LoremIpsum);
             Console.WriteLine("Enum.ToObject vs DynamicMethod");

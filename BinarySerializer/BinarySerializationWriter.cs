@@ -19,6 +19,8 @@
     {       
         private Stream stream;
 
+        private WriteCache cache = new WriteCache();
+
         private readonly SerializerOptions options;
 
         private readonly byte[] buffer = new byte[0x10];
@@ -38,7 +40,7 @@
         /// </param>
         public BinarySerializationWriter(Stream stream):this(stream, GetSerializationOptions())
         {
-            
+            cache.Invalidate();    
         }
 
         private void WriteAssemblyVersion()
@@ -686,9 +688,13 @@
                         token = (byte)(token | 0x1);
                         Write(token);
                         Write((uint)length);
+                        Write(bytes); 
                     }
-                    
-                    Write(bytes);                    
+                    else
+                    {
+                        Write(token);
+                        Write(bytes); 
+                    }                   
                     stringCache.Add(value, token);
                 }                
             }            
@@ -823,7 +829,7 @@
             }            
         }
 
-        public void Write(IBinarySerializable value)
+        public void WriteBinarySerializableObject(IBinarySerializable value)
         {
             if (value == null)
             {
@@ -841,11 +847,15 @@
                     token = (ulong)objectCache.Count + 1;
                     objectCache.Add(value, token);
                     Write(token);
-                    Write(value.GetType().AssemblyQualifiedName);
-                    value.Serialize(this);
-                    Type t
+                    Write(value.GetType());
+                    value.Serialize(this);                    
                 }           
             }
+        }
+
+        public void Write(Type type)
+        {
+            Write(type.AssemblyQualifiedName);
         }
 
         public bool RequiresTypeInformation(byte typeCode)

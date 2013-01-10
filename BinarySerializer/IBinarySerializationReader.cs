@@ -188,5 +188,11 @@
         /// <returns>The next <see cref="IBinarySerializable"/> object read from the current stream.</returns>
         T ReadBinarySerializeableObject<T>() where T : IBinarySerializable;
 
+        /// <summary>
+        /// Reads the next <see cref="Type"/> from the current stream.
+        /// </summary>
+        /// <returns>The next <see cref="Type"/> read from the current stream.</returns>
+        Type ReadType();
+
     }
 }

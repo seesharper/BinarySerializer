@@ -571,10 +571,17 @@ namespace BinarySerializer.Tests
         [TestMethod]
         public void Write_BinarySerializeableObject_CanBeRead()
         {
-            BinarySerializableClass serializableClass = new BinarySerializableClass() { Value = "SomeValue" };
-            GetWriter().Write(serializableClass);
-            BinarySerializableClass result = GetReader().ReadObject<BinarySerializableClass>();
+            IBinarySerializable serializableClass = new BinarySerializableClass() { Value = "SomeValue" };
+            GetWriter().WriteBinarySerializableObject(serializableClass);
+            BinarySerializableClass result = GetReader().ReadBinarySerializeableObject<BinarySerializableClass>();
             Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void Write_Type_CanBeRead()
+        {
+            GetWriter().Write(typeof(string));
+            Assert.AreEqual(typeof(string), GetReader().ReadType());
         }
 
 

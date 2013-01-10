@@ -15,7 +15,9 @@
     {
         private Stream stream;
         private readonly byte[] buffer = new byte[0x10];
-        
+
+        private ReadCache cache = new ReadCache();
+
         private readonly IDictionary<ulong, string> stringCache = new Dictionary<ulong, string>();
         private readonly IDictionary<ulong, object> objectCache = new Dictionary<ulong, object>();
         private Encoding encoding;
@@ -30,8 +32,8 @@
         /// <param name="stream">The target <see cref="Stream"/></param>        
         public BinarySerializationReader(Stream stream)
         {
+            cache.Invalidate();
             this.stream = stream;
-
             this.VerifySerializerVersion();
             options.Deserialize(this);
             encoding = Encoding.GetEncoding((int)options.CodePage);
@@ -494,15 +496,21 @@
                 return default(T);
             }
 
-            object value;
-            if (!objectCache.TryGetValue(token, out value))
-            {                
-                value = Activator.CreateInstance(TypeHelper.GetType(ReadString()));
-                objectCache.Add(token, value);
-                ((IBinarySerializable)value).Deserialize(this);
+            T value;
+            if (!cache.TryGetValue(token, out value))
+            {
+                string typeName = this.ReadString();
+                value = (T)Activator.CreateInstance(TypeHelper.GetType(typeName));
+                cache.Add(token, value);
+                value.Deserialize(this);                
             }
 
-            return (T)value;
+            return value;
+        }
+
+        public Type ReadType()
+        {
+            return TypeHelper.GetType(ReadString());
         }
 
         private object ReadSerializableObject()

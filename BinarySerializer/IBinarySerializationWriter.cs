@@ -186,7 +186,7 @@
         /// Writes an object that implements the <see cref="IBinarySerializable"/> interface to the current stream.
         /// </summary>
         /// <param name="value">The object to write.</param>
-        void Write(IBinarySerializable value);
+        void WriteBinarySerializableObject(IBinarySerializable value);
 
         /// <summary>
         /// Writes a <see cref="Type"/> object to the current stream.

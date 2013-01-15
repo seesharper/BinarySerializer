@@ -3,15 +3,11 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BinarySerializer.Tests
-{
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
+{    
     using System.IO;
-
-    using BinarySerializer.Configuration;
-
+   
     [TestClass]
-    public class SerializatitonTests
+    public class SimpleTypesSerializatitonTests
     {
         private readonly MemoryStream stream = new MemoryStream();
         
@@ -183,8 +179,8 @@ namespace BinarySerializer.Tests
         [TestMethod]
         public void Write_Int32_CanBeRead()
         {
-            GetWriter().Write((int)42);
-            Assert.AreEqual((int)42, GetReader().ReadInt32());
+            GetWriter().Write(42);
+            Assert.AreEqual(42, GetReader().ReadInt32());
         }
 
         [TestMethod]
@@ -212,7 +208,7 @@ namespace BinarySerializer.Tests
         public void Write_NullableInt32_CanBeRead()
         {
             GetWriter().Write((int?)42);
-            Assert.AreEqual((int?)42, GetReader().ReadNullableInt32());
+            Assert.AreEqual(42, GetReader().ReadNullableInt32());
         }
 
         [TestMethod]
@@ -262,7 +258,7 @@ namespace BinarySerializer.Tests
         public void Write_Int64_CanBeRead()
         {
             GetWriter().Write((long)42);
-            Assert.AreEqual((long)42, GetReader().ReadInt64());
+            Assert.AreEqual(42, GetReader().ReadInt64());
         }
 
         [TestMethod]
@@ -290,7 +286,7 @@ namespace BinarySerializer.Tests
         public void Write_NullableInt64_CanBeRead()
         {
             GetWriter().Write((long?)42);
-            Assert.AreEqual((long?)42, GetReader().ReadNullableInt64());
+            Assert.AreEqual(42, GetReader().ReadNullableInt64());
         }
 
         [TestMethod]
@@ -325,7 +321,7 @@ namespace BinarySerializer.Tests
         public void Write_NullableDecimal_CanBeRead()
         {
             GetWriter().Write((decimal?)42);
-            Assert.AreEqual((decimal?)42, GetReader().ReadNullableDecimal());
+            Assert.AreEqual(42, GetReader().ReadNullableDecimal());
         }
 
         [TestMethod]
@@ -367,7 +363,7 @@ namespace BinarySerializer.Tests
         public void Write_NullableDouble_CanBeRead()
         {
             GetWriter().Write((double?)42);
-            Assert.AreEqual((double?)42, GetReader().ReadNullableDouble());
+            Assert.AreEqual(42, GetReader().ReadNullableDouble());
         }
 
         [TestMethod]
@@ -409,7 +405,7 @@ namespace BinarySerializer.Tests
         public void Write_NullableSingle_CanBeRead()
         {
             GetWriter().Write((float?)42);
-            Assert.AreEqual((float?)42, GetReader().ReadNullableSingle());
+            Assert.AreEqual(42, GetReader().ReadNullableSingle());
         }
 
         [TestMethod]
@@ -489,21 +485,21 @@ namespace BinarySerializer.Tests
         public void Write_NullableBooleanTrue_CanBeRead()
         {            
             GetWriter().Write((bool?)true);
-            Assert.AreEqual((bool?)true, GetReader().ReadNullableBoolean());            
+            Assert.AreEqual(true, GetReader().ReadNullableBoolean());            
         }
 
         [TestMethod]
         public void Write_NullableBooleanFalse_CanBeRead()
         {
             GetWriter().Write((bool?)false);
-            Assert.AreEqual((bool?)false, GetReader().ReadNullableBoolean());
+            Assert.AreEqual(false, GetReader().ReadNullableBoolean());
         }
 
         [TestMethod]
         public void Write_NullableBooleanWithNullValue_CanBeRead()
         {
             GetWriter().Write((bool?)null);
-            Assert.AreEqual((bool?)null, GetReader().ReadNullableBoolean());
+            Assert.AreEqual(null, GetReader().ReadNullableBoolean());
         }
 
         [TestMethod]
@@ -517,7 +513,7 @@ namespace BinarySerializer.Tests
         public void Write_StringWithNullValue_CanBeRead()
         {
             GetWriter().Write((string)null);
-            Assert.AreEqual((string)null, GetReader().ReadString());
+            Assert.AreEqual(null, GetReader().ReadString());
         }
 
         [TestMethod]
@@ -529,10 +525,8 @@ namespace BinarySerializer.Tests
 
         [TestMethod]
         public void Write_CompressedString_CanBeRead()
-        {
-            var options = new SerializerOptions();
-            options.Threshold = 1;
-            this.GetWriter(options).Write(Text.LoremIpsum);
+        {            
+            this.GetWriter().Write(Text.LoremIpsum);
             Assert.AreEqual(Text.LoremIpsum, GetReader().ReadString());        
         }
               
@@ -549,31 +543,11 @@ namespace BinarySerializer.Tests
             GetWriter().Write((Type)null);
             Assert.IsNull(GetReader().ReadType());
         }
-      
-        [TestMethod]
-        public void Experimental()
-        {
-            var writer = GetWriter();
-            writer.Write("SomeValue");
-            writer.Write("SomeValue");
-
-            var reader = GetReader();
-            var result1 = reader.ReadString();
-            var result2 = reader.ReadString();
-        }
-
-
-
+        
         private IBinarySerializationWriter GetWriter()
         {
             stream.SetLength(0);
             return new BinarySerializationWriter(stream);
-        }
-
-        private IBinarySerializationWriter GetWriter(SerializerOptions options)
-        {
-            stream.SetLength(0);
-            return new BinarySerializationWriter(stream, options);
         }
 
         private BinarySerializationReader GetReader()

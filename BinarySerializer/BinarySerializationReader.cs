@@ -498,6 +498,10 @@
             var methodInfo = BinarySerializer.ReadMethods.GetReadMethod(actualType);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Call, methodInfo);
+            if (!typeof(T).IsValueType && actualType.IsValueType)
+            {
+                il.Emit(OpCodes.Box, actualType);
+            }
             // Todo check T to see if we need to box the value
 
             il.Emit(OpCodes.Ret);

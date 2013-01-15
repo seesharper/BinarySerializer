@@ -35,6 +35,12 @@
                 return methodInfo;
             }
 
+            if (typeof(Type).IsAssignableFrom(type))
+            {
+                return typeof(BinarySerializationReader).GetMethod("ReadType");
+            }
+            
+
             if (typeof(IBinarySerializable).IsAssignableFrom(type))
             {
                 MethodInfo closedGenericWriteMethod = OpenGenericReadBinarySerializableObjectMethod.MakeGenericMethod(type);

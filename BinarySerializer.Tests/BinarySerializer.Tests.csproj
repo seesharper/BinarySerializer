@@ -59,8 +59,10 @@
     <Compile Include="GenericSerializationTests.cs" />
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="SerializableClass.cs" />
+    <Compile Include="SimpleTypesAsObjectSerializationTests.cs" />
     <Compile Include="SimpleTypesSerializatitonTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestBase.cs" />
     <Compile Include="Text.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

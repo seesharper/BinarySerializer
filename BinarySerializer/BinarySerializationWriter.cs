@@ -796,6 +796,11 @@
             MethodInfo methodInfo = WriteMethods.GetWriteMethod(actualType);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldarg_1);
+            if (!typeof(T).IsValueType && actualType.IsValueType)
+            {
+                il.Emit(OpCodes.Unbox_Any, actualType);
+            }
+            
             //TODO Abstract this to enable PEVerify. It is strange that we don't we need OpCodes.CastClass            
             il.Emit(OpCodes.Call, methodInfo);
             il.Emit(OpCodes.Ret);

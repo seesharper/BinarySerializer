@@ -175,7 +175,6 @@ namespace BinarySerializer.Tests
             Assert.AreEqual(null, GetReader().ReadNullableUInt32());
         }
 
-
         [TestMethod]
         public void Write_Int32_CanBeRead()
         {
@@ -217,7 +216,6 @@ namespace BinarySerializer.Tests
             GetWriter().Write((int?)null);
             Assert.AreEqual(null, GetReader().ReadNullableInt32());
         }
-
 
         [TestMethod]
         public void Write_UInt64_CanBeRead()
@@ -531,10 +529,17 @@ namespace BinarySerializer.Tests
         }
               
         [TestMethod]
-        public void Write_Type_CanBeRead()
+        public void Write_KnownType_CanBeRead()
         {
             GetWriter().Write(typeof(string));
             Assert.AreEqual(typeof(string), GetReader().ReadType());
+        }
+
+        [TestMethod]
+        public void Write_UnKnownType_CanBeRead()
+        {
+            GetWriter().Write(typeof(SerializableClass));
+            Assert.AreEqual(typeof(SerializableClass), GetReader().ReadType());
         }
 
         [TestMethod]

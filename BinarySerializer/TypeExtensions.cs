@@ -20,5 +20,24 @@
         {
             return @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICollection<>);
         } 
+
+        public static Type GetCollectionType(this Type type)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ICollection<>))
+            {
+                return type;
+            }
+            var interfaces = type.GetInterfaces();
+            foreach (var interfaceType in interfaces)
+            {
+                if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == typeof(ICollection<>))
+                {
+                    return interfaceType;
+                }
+            }
+
+            return null;
+        }
+
     }
 }

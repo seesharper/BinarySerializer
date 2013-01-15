@@ -178,21 +178,14 @@
         /// <summary>
         /// Reads the next object value from the current stream.
         /// </summary>        
+        /// <typeparam name="T">The type of object to read.</typeparam>
         /// <returns>The next object read from the current stream.</returns>
-        T ReadObject<T>();
-
-        /// <summary>
-        /// Reads the next <see cref="IBinarySerializable"/> object from the current stream.
-        /// </summary>
-        /// <typeparam name="T">The type of object to be returned from the stream.</typeparam>
-        /// <returns>The next <see cref="IBinarySerializable"/> object read from the current stream.</returns>
-        T ReadBinarySerializeableObject<T>() where T : IBinarySerializable;
-
+        T Read<T>();
+    
         /// <summary>
         /// Reads the next <see cref="Type"/> from the current stream.
         /// </summary>
         /// <returns>The next <see cref="Type"/> read from the current stream.</returns>
-        Type ReadType();
-
+        Type ReadType();        
     }
 }

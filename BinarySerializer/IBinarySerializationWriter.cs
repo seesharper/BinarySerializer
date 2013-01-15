@@ -1,8 +1,7 @@
 ﻿namespace BinarySerializer
 {
     using System;
-    using System.Collections.Generic;
-
+    
     /// <summary>
     /// Represents a class that is capable of serializing an object graph to a byte stream. 
     /// </summary>    
@@ -175,30 +174,18 @@
         /// </summary>
         /// <param name="value">The <see cref="string"/> value to write.</param>
         void Write(string value);
-
+     
         /// <summary>
         /// Writes an object to the current stream.
-        /// </summary>        
+        /// </summary>
+        /// <typeparam name="T">The type of object to write.</typeparam>        
         /// <param name="value">The object to write.</param>
         void Write<T>(T value);
-
-        /// <summary>
-        /// Writes an object that implements the <see cref="IBinarySerializable"/> interface to the current stream.
-        /// </summary>
-        /// <param name="value">The object to write.</param>
-        void WriteBinarySerializableObject(IBinarySerializable value);
-
+    
         /// <summary>
         /// Writes a <see cref="Type"/> object to the current stream.
         /// </summary>
-        /// <param name="type"></param>
-        void Write(Type type);
-
-        ///// <summary>
-        ///// Writes an <see cref="ICollection{T}"/> to the current stream.
-        ///// </summary>
-        ///// <typeparam name="T">The type of the elements in the collection.</typeparam>
-        ///// <param name="collection">The <see cref="ICollection{T}"/> to write.</param>
-        //void Write<T>(ICollection<T> collection);
+        /// <param name="type">The <see cref="Type"/> value to write.</param>
+        void Write(Type type);      
     }
 }

@@ -1,7 +1,9 @@
 ﻿namespace BinarySerializer
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Collections.Specialized;
     using System.Configuration;
     using System.IO;
@@ -32,6 +34,8 @@
 
         private ICompressor compressor;
 
+        private static readonly ConcurrentDictionary<Type, Action<BinarySerializationWriter, object>> WriterMethods = new ConcurrentDictionary<Type, Action<BinarySerializationWriter, object>>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BinarySerializationWriter"/> class.
         /// </summary>
@@ -41,6 +45,12 @@
         public BinarySerializationWriter(Stream stream):this(stream, GetSerializationOptions())
         {
             cache.Invalidate();    
+        }
+
+        static BinarySerializationWriter()
+        {
+            WriterMethods.TryAdd(typeof(byte), (writer, value) => writer.Write((byte)value));
+            WriterMethods.TryAdd(typeof(int), (writer, value) => writer.Write((int)value));
         }
 
         private void WriteAssemblyVersion()
@@ -699,33 +709,26 @@
                 }                
             }            
         }
-
-       
-
-        private void WriteCollection<T>(ICollection<T> collection)
+             
+        internal void WriteCollectionInternal<T>(ICollection<T> collection)
         {
-            Type elementType = typeof(T);
-            
-            if (elementType.IsSealed)
+            ulong token;
+            if (cache.TryGetValue(collection, out token))
             {
-                var writeMethod = (Action<T>)GetWriteMethod(elementType);
-                foreach (var value in collection)
-                {
-                    writeMethod(value);
-                }
+                this.Write(token);
             }
             else
-            {
+            {                             
+                Write(cache.Add(collection));                
+                Write((uint)collection.Count);                                
                 foreach (var value in collection)
                 {
-                    elementType = value.GetType();
-                    Action<object> writeMethod = this.GetObjectWriteMethod(elementType);
-                    writeMethod(value);
+                    Write(value);
                 }
-            }                        
+            }
         }
-              
-        private void WriteSerializeableObject(object value)
+      
+        internal void WriteSerializableObject(object value)
         {
             ulong token;
             if (objectCache.TryGetValue(value, out token))
@@ -742,47 +745,24 @@
             }            
         }
        
-        private Delegate GetWriteMethod(Type type) 
+
+
+
+        private Action<BinarySerializationWriter,object> GetWriteMethod(Type type)
         {
-            
-            if (type == typeof(byte))
+            return WriterMethods.GetOrAdd(type, t => ResolveWriteMethod(t));
+
+        }
+
+        private Action<BinarySerializationWriter, object> ResolveWriteMethod(Type type)
+        {
+            Type collectionType = type.GetCollectionType();
+            if (collectionType != null)
             {
-                Action<byte> method = Write;
-                return method;                
+                
             }
 
-            //if (type == typeof(short))
-            //{
-            //    Action<short> method = Write;
-            //    return method;
-            //}
-
-            //if (type == typeof(short?))
-            //{
-            //    Action<short?> method = Write;
-            //    return method;
-            //}
-
-            //if (type == typeof(int))
-            //{
-            //    Action<int> method = Write;
-            //    return method;
-            //}
-
-            //if (type == typeof(int?))
-            //{
-            //    Action<int?> method = Write;
-            //    return method;
-            //}
-
-            //if (typeof(T).IsCollectionType())
-            //{
-            //    Action<ICollection<T>> method = this.WriteCollection;
-            //    return method;             
-            //}
-
-            Action<object> d = this.WriteSerializeableObject;
-            return d;
+            return (writer, value) => writer.WriteSerializableObject(value);
         }
 
         private Action<object> GetObjectWriteMethod(Type type)
@@ -792,73 +772,40 @@
                 return value => WriteByte((byte)value);                               
             }
 
-            return this.WriteSerializeableObject;
+            return this.WriteSerializableObject;
         }
 
         public void Write<T>(T value) 
-        {
+        {            
             if (value == null)
             {
-                Write((byte)TypeCode.Null);
+                Write(TypeCodes.Null);
             }
             else
             {
-                Action writeMethod;                
-                Type elementType = typeof(T);
-
-                var wm = this.CreateWriteMethod<T>(value.GetType());
-                wm(value, this);
-
-                if (elementType.IsSealed)
-                {                    
-                    writeMethod = () => ((Action<T>)GetWriteMethod(elementType))(value);
-                }
-                else
-                {
-                    elementType = value.GetType();
-                    writeMethod = () => GetObjectWriteMethod(elementType)(value);
-                }
-                
-                
-                byte typeCode = GetTypeCode(elementType);
-                if (RequiresTypeInformation(typeCode))
-                {
-                    Write(elementType.AssemblyQualifiedName);
-                }
-                else
-                {
-                    Write(typeCode);
-                }
-                writeMethod();                
-            }            
+                Type type = value.GetType();
+                Write(type);
+                CreateWriteMethod<T>(type)(this, value);
+            }               
         }
 
-        private Action<T, BinarySerializationWriter> CreateWriteMethod<T>(Type actualType)
+        private Action<BinarySerializationWriter, T> CreateWriteMethod<T>(Type actualType)
         {
-            var dynamicMethod = new DynamicMethod("DynamicMethod", typeof(void), new[]{typeof(T), typeof(BinarySerializationWriter)}, typeof(BinarySerializationWriter).Module);
+            var dynamicMethod = new DynamicMethod("DynamicMethod",typeof(void), new Type[]{typeof(BinarySerializationWriter), typeof(T)},typeof(BinarySerializationWriter).Module);
             ILGenerator il = dynamicMethod.GetILGenerator();
-            var methodInfo = this.GetWriteMethodInfo(actualType);
+            MethodInfo methodInfo = WriteMethods.GetWriteMethod(actualType);
+            il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldarg_0);            
-            il.Emit(OpCodes.Unbox, actualType);
+            //TODO Abstract this to enable PEVerify. It is strange that we don't we need OpCodes.CastClass            
             il.Emit(OpCodes.Call, methodInfo);
             il.Emit(OpCodes.Ret);
-            return (Action<T, BinarySerializationWriter>)dynamicMethod.CreateDelegate(typeof(Action<T, BinarySerializationWriter>));
+            return (Action<BinarySerializationWriter, T>)dynamicMethod.CreateDelegate(typeof(Action<BinarySerializationWriter, T>));
         }
 
+        
 
-        private MethodInfo GetWriteMethodInfo(Type type)
-        {
-            if (type == typeof(byte))
-            {
-                return typeof(BinarySerializationWriter).GetMethod("Write", new[] { typeof(byte) });
-
-            }
-            throw new NotSupportedException();
-        }
-
-        public void WriteBinarySerializableObject(IBinarySerializable value)
-        {
+        internal void WriteBinarySerializableObject<T>(T value) where T : IBinarySerializable, new()
+        {            
             if (value == null)
             {
                 Write((ulong)0);
@@ -866,16 +813,13 @@
             else
             {
                 ulong token;
-                if (objectCache.TryGetValue(value, out token))
+                if (cache.TryGetValue(value, out token))
                 {
                     Write(token);
                 }
                 else
-                {
-                    token = (ulong)objectCache.Count + 1;
-                    objectCache.Add(value, token);
-                    Write(token);
-                    Write(value.GetType());
+                {                                     
+                    Write(cache.Add(value));                   
                     value.Serialize(this);                    
                 }           
             }
@@ -883,35 +827,27 @@
 
         public void Write(Type type)
         {
-            Write(type.AssemblyQualifiedName);
-        }
-
-        public bool RequiresTypeInformation(byte typeCode)
-        {
-            return typeCode > 0x10;
-        }
-
-
-        private byte GetTypeCode(Type type)
-        {
-            if (type == typeof(byte))
+            if (type == null)
             {
-                return TypeCodes.Byte;
+                Write(TypeCodes.Null);
             }
-
-            
-            return TypeCodes.Serializable;
+            else
+            {
+                byte typeCode = TypeCodes.GetTypeCode(type);
+                Write(typeCode);
+                if (typeCode >= TypeCodes.Array)
+                {
+                    Write(type.AssemblyQualifiedName);
+                }                
+            }            
             
         }
 
-     
-        private void WriteBinarySerializable<T>(T value) where T : IBinarySerializable
-        {                        
-            Write(TypeCode.BinarySerializable);                
-            value.Serialize(this);            
+        public void Write<TKey, TValue>(IDictionary<TKey, TValue> dictionary)
+        {
+            throw new NotImplementedException();
         }
-
-     
+              
     }
 
 

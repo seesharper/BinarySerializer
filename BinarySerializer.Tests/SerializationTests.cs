@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BinarySerializer.Tests
 {
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
 
@@ -49,21 +50,6 @@ namespace BinarySerializer.Tests
         {            
             GetWriter().Write((byte[])null);            
             Assert.IsNull(GetReader().ReadBytes());
-        }
-
-
-        [TestMethod]
-        public void Write_ByteAsObject_CanBeRead()
-        {
-            GetWriter().Write((object)(byte)42);
-            Assert.AreEqual((byte)42, (byte)GetReader().ReadObject<object>());
-        }
-
-        [TestMethod]
-        public void Write_ByteAsByte_CanBeRead()
-        {
-            GetWriter().Write<byte>(42);
-            Assert.AreEqual(42, GetReader().ReadObject<byte>());
         }
 
 
@@ -549,34 +535,7 @@ namespace BinarySerializer.Tests
             this.GetWriter(options).Write(Text.LoremIpsum);
             Assert.AreEqual(Text.LoremIpsum, GetReader().ReadString());        
         }
-
-        [TestMethod]
-        public void Write_SerializeableObject_CanBeRead()
-        {
-            SerializableClass serializableClass = new SerializableClass() { Value = "SomeValue" };    
-            GetWriter().Write(serializableClass);
-            SerializableClass result = GetReader().ReadObject<SerializableClass>();
-            Assert.IsNotNull(result);
-        }
-
-        [TestMethod]
-        public void Write_SealedSerializeableObject_CanBeRead()
-        {
-            SealedSerializableClass serializableClass = new SealedSerializableClass() { Value = "SomeValue" };
-            GetWriter().Write(serializableClass);
-            var result = GetReader().ReadObject<SealedSerializableClass>();
-            Assert.IsNotNull(result);
-        }
-
-        [TestMethod]
-        public void Write_BinarySerializeableObject_CanBeRead()
-        {
-            IBinarySerializable serializableClass = new BinarySerializableClass() { Value = "SomeValue" };
-            GetWriter().WriteBinarySerializableObject(serializableClass);
-            BinarySerializableClass result = GetReader().ReadBinarySerializeableObject<BinarySerializableClass>();
-            Assert.IsNotNull(result);
-        }
-
+              
         [TestMethod]
         public void Write_Type_CanBeRead()
         {
@@ -584,13 +543,23 @@ namespace BinarySerializer.Tests
             Assert.AreEqual(typeof(string), GetReader().ReadType());
         }
 
-
+        [TestMethod]
+        public void Write_NullType_CanBeRead()
+        {
+            GetWriter().Write((Type)null);
+            Assert.IsNull(GetReader().ReadType());
+        }
+      
         [TestMethod]
         public void Experimental()
         {
-            object value = (byte)42;
-            
-            GetWriter().Write(value);
+            var writer = GetWriter();
+            writer.Write("SomeValue");
+            writer.Write("SomeValue");
+
+            var reader = GetReader();
+            var result1 = reader.ReadString();
+            var result2 = reader.ReadString();
         }
 
 

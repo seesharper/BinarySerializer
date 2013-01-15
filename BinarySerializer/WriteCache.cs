@@ -28,10 +28,11 @@
             return PerThreadCache<TKey, ulong>.TryGetValue(key, out value);
         }
 
-        public void Add<TKey>(TKey key, ulong value)
+        public ulong Add<TKey>(TKey key)
         {
             RegisterInvalidateAction<TKey>();
-            PerThreadCache<TKey, ulong>.Add(key, value);
+            PerThreadCache<TKey, ulong>.Add(key, (ulong)PerThreadCache<TKey, ulong>.Count + 1);
+            return (ulong)PerThreadCache<TKey, ulong>.Count;
         }
 
         private void RegisterInvalidateAction<TKey>()

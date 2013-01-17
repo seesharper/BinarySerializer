@@ -16,6 +16,16 @@
             return IsCollectionOfT(type) || (!type.IsArray && type.GetInterfaces().Any(IsCollectionOfT));
         }
 
+        /// <summary>
+        /// Determines if the a given type is a <see cref="Nullable{T}"/> type.
+        /// </summary>
+        /// <param name="type">The target <see cref="Type"/>.</param>
+        /// <returns><b>true</b> if the <paramref name="type"/> is a <see cref="Nullable{T}"/> type, otherwise <b>false</b></returns>       
+        public static bool IsNullable(this Type type)
+        {
+            return Nullable.GetUnderlyingType(type) != null;
+        }
+
         private static bool IsCollectionOfT(Type @interface)
         {
             return @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICollection<>);

@@ -46,6 +46,18 @@
         {
             cache.Invalidate();    
         }
+        public BinarySerializationWriter(Stream stream, SerializerOptions options)
+        {
+            WriteMethodFactory = new WriteMethodFactory(new WriteMethodSkeleton());
+            this.stream = stream;
+            this.options = options;
+            WriteAssemblyVersion();
+            WriteSerializerOptions(options);
+            encoding = Encoding.GetEncoding((int)options.CodePage);
+            compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
+        }
+
+        public IWriteMethodFactory WriteMethodFactory { get; set; }
 
         static BinarySerializationWriter()
         {
@@ -62,15 +74,7 @@
             this.Write(assembly.Revision);
         }
 
-        public BinarySerializationWriter(Stream stream, SerializerOptions options)
-        {            
-            this.stream = stream;
-            this.options = options;
-            WriteAssemblyVersion();
-            WriteSerializerOptions(options);
-            encoding = Encoding.GetEncoding((int)options.CodePage);
-            compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
-        }
+       
 
         private void WriteSerializerOptions(SerializerOptions serializerOptions)
         {
@@ -473,7 +477,33 @@
                 Write(value.Value);
             }
         }
-      
+
+        /// <summary>
+        /// Writes an <see cref="sbyte"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="sbyte"/> value to write.</param>
+        public void Write(sbyte value)
+        {
+            stream.WriteByte((byte)value);
+        }
+
+        /// <summary>
+        /// Writes a nullable <see cref="sbyte"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="sbyte"/> value to write.</param>
+        public void Write(sbyte? value)
+        {
+            if (value == null)
+            {
+                Write(true);
+            }
+            else
+            {
+                Write(false);
+                Write(value.Value);
+            }
+        }
+
         /// <summary>
         /// Writes an <see cref="decimal"/> to the current stream.
         /// </summary>
@@ -783,7 +813,11 @@
             }
             else
             {
-                Type type = value.GetType();
+                Type type = typeof(T);
+                if (!type.IsSealed)
+                {
+                    type = value.GetType();
+                }                
                 Write(type);
                 CreateWriteMethod<T>(type)(this, value);
             }               
@@ -791,20 +825,7 @@
 
         private Action<BinarySerializationWriter, T> CreateWriteMethod<T>(Type actualType)
         {
-            var dynamicMethod = new DynamicMethod("DynamicMethod",typeof(void), new Type[]{typeof(BinarySerializationWriter), typeof(T)},typeof(BinarySerializationWriter).Module);
-            ILGenerator il = dynamicMethod.GetILGenerator();
-            MethodInfo methodInfo = WriteMethods.GetWriteMethod(actualType);
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldarg_1);
-            if (!typeof(T).IsValueType && actualType.IsValueType)
-            {
-                il.Emit(OpCodes.Unbox_Any, actualType);
-            }
-            
-            //TODO Abstract this to enable PEVerify. It is strange that we don't we need OpCodes.CastClass            
-            il.Emit(OpCodes.Call, methodInfo);
-            il.Emit(OpCodes.Ret);
-            return (Action<BinarySerializationWriter, T>)dynamicMethod.CreateDelegate(typeof(Action<BinarySerializationWriter, T>));
+            return WriteMethodFactory.CreateWriteMethod<T>(actualType);                     
         }
 
         
@@ -830,6 +851,9 @@
             }
         }
 
+        
+
+
         public void Write(Type type)
         {
             if (type == null)
@@ -853,11 +877,5 @@
             throw new NotImplementedException();
         }
               
-    }
-
-
-    public sealed class Lambda<T>
-    {
-        public static Func<T, T> Cast = x => x;
     }
 }

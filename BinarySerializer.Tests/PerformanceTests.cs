@@ -10,7 +10,7 @@
 
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-    [TestClass]
+    [TestClass, Ignore]
     public class PerformanceTests
     {
         [TestMethod] 

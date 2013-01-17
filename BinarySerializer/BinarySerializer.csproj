@@ -44,6 +44,8 @@
     <Compile Include="BinarySerializationReader.cs" />
     <Compile Include="BinarySerializationWriter.cs" />
     <Compile Include="Cache.cs" />
+    <Compile Include="IWriteMethodFactory.cs" />
+    <Compile Include="IWriteMethodSkeleton.cs" />
     <Compile Include="KeyValueStorage.cs" />
     <Compile Include="PerThreadCache.cs" />
     <Compile Include="Configuration\SerializerOptions.cs" />
@@ -60,7 +62,9 @@
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="TypeHelper.cs" />
     <Compile Include="WriteCache.cs" />
+    <Compile Include="WriteMethodFactory.cs" />
     <Compile Include="WriteMethods.cs" />
+    <Compile Include="WriteMethodSkeleton.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

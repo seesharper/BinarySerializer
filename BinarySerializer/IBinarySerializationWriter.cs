@@ -90,13 +90,25 @@
         /// </summary>
         /// <param name="bytes">The <see cref="byte"/> array to write.</param>
         void Write(byte[] bytes);
-
+        
         /// <summary>
         /// Writes a nullable <see cref="byte"/> to the current stream.
         /// </summary>
         /// <param name="value">The <see cref="byte"/> value to write.</param>
         void Write(byte? value);
-     
+
+        /// <summary>
+        /// Writes an <see cref="sbyte"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="sbyte"/> value to write.</param>
+        void Write(sbyte value);
+
+        /// <summary>
+        /// Writes a nullable <see cref="sbyte"/> to the current stream.
+        /// </summary>
+        /// <param name="value">The <see cref="sbyte"/> value to write.</param>
+        void Write(sbyte? value);
+
         /// <summary>
         /// Writes an <see cref="decimal"/> to the current stream.
         /// </summary>

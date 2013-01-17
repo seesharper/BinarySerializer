@@ -64,6 +64,41 @@ namespace BinarySerializer.Tests
         }
 
         [TestMethod]
+        public void Write_SByte_CanBeRead()
+        {
+            GetWriter().Write((sbyte)42);
+            Assert.AreEqual((sbyte)42, GetReader().ReadSByte());
+        }
+
+        [TestMethod]
+        public void Write_SByteWithMinValue_CanBeRead()
+        {
+            GetWriter().Write(sbyte.MinValue);
+            Assert.AreEqual(sbyte.MinValue, GetReader().ReadSByte());
+        }
+
+        [TestMethod]
+        public void Write_SByteWithMaxValue_CanBeRead()
+        {
+            GetWriter().Write(sbyte.MaxValue);
+            Assert.AreEqual(sbyte.MaxValue, GetReader().ReadSByte());
+        }
+
+        [TestMethod]
+        public void Write_NullableSByte_CanBeRead()
+        {
+            GetWriter().Write((sbyte?)42);
+            Assert.AreEqual((sbyte?)42, GetReader().ReadNullableSByte());
+        }
+
+        [TestMethod]
+        public void Write_NullableSByteWithNullValue_CanBeRead()
+        {
+            GetWriter().Write((sbyte?)null);
+            Assert.AreEqual(null, GetReader().ReadNullableSByte());
+        }
+
+        [TestMethod]
         public void Write_UInt16_CanBeRead()
         {
             GetWriter().Write((ushort)42);

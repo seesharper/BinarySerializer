@@ -291,7 +291,25 @@
         {
             return ReadBoolean() ? (byte?)null : this.ReadByte();
         }
-        
+
+        /// <summary>
+        /// Reads the next <see cref="sbyte"/> from the current stream.
+        /// </summary>
+        /// <returns>The next <see cref="sbyte"/> read from the current stream.</returns>
+        public sbyte ReadSByte()
+        {
+            return (sbyte)stream.ReadByte();
+        }
+
+        /// <summary>
+        /// Reads the next nullable <see cref="sbyte"/> from the current stream.
+        /// </summary>
+        /// <returns>The next nullable <see cref="sbyte"/> read from the current stream.</returns>
+        public sbyte? ReadNullableSByte()
+        {
+            return ReadBoolean() ? (sbyte?)null : this.ReadSByte();
+        }
+
         /// <summary>
         /// Reads the next <see cref="decimal"/> from the current stream.
         /// </summary>

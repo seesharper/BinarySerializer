@@ -438,6 +438,20 @@
         {
             GetWriter().Write<object>(typeof(SerializableClass));
             Assert.AreEqual(typeof(SerializableClass), (Type)GetReader().Read<object>());
-        }              
+        }
+
+        [TestMethod]
+        public void Write_ByteEnum_CanBeRead()
+        {
+            GetWriter().Write(ByteEnum.Fri);
+            Assert.AreEqual(ByteEnum.Fri, GetReader().Read<ByteEnum>());
+        }
+
+        [TestMethod]
+        public void Write_NullableByteEnum_CanBeRead()
+        {
+            GetWriter().Write((ByteEnum?)ByteEnum.Fri);
+            Assert.AreEqual(ByteEnum.Fri, GetReader().Read<ByteEnum?>());
+        }
     }
 }

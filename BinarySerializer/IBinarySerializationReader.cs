@@ -96,7 +96,19 @@
         /// </summary>
         /// <returns>The next nullable <see cref="byte"/> read from the current stream.</returns>
         byte? ReadNullableByte();
-        
+
+        /// <summary>
+        /// Reads the next <see cref="sbyte"/> from the current stream.
+        /// </summary>
+        /// <returns>The next <see cref="sbyte"/> read from the current stream.</returns>
+        sbyte ReadSByte();
+
+        /// <summary>
+        /// Reads the next nullable <see cref="sbyte"/> from the current stream.
+        /// </summary>
+        /// <returns>The next nullable <see cref="sbyte"/> read from the current stream.</returns>
+        sbyte? ReadNullableSByte();
+
         /// <summary>
         /// Reads the next <see cref="decimal"/> from the current stream.
         /// </summary>

@@ -562,38 +562,17 @@ namespace BinarySerializer.Tests
             this.GetWriter().Write(Text.LoremIpsum);
             Assert.AreEqual(Text.LoremIpsum, GetReader().ReadString());        
         }
-              
-        [TestMethod]
-        public void Write_KnownType_CanBeRead()
-        {
-            GetWriter().Write(typeof(string));
-            Assert.AreEqual(typeof(string), GetReader().ReadType());
-        }
-
-        [TestMethod]
-        public void Write_UnKnownType_CanBeRead()
-        {
-            GetWriter().Write(typeof(SerializableClass));
-            Assert.AreEqual(typeof(SerializableClass), GetReader().ReadType());
-        }
-
-        [TestMethod]
-        public void Write_NullType_CanBeRead()
-        {
-            GetWriter().Write((Type)null);
-            Assert.IsNull(GetReader().ReadType());
-        }
-        
-        private IBinarySerializationWriter GetWriter()
+                              
+        private IWriter GetWriter()
         {
             stream.SetLength(0);
-            return new BinarySerializationWriter(stream);
+            return new Writer(stream);
         }
 
-        private BinarySerializationReader GetReader()
+        private IReader GetReader()
         {
             stream.Position = 0;
-            return new BinarySerializationReader(stream);          
+            return new Reader(stream);
         }
         
         private void CompareDateTime(DateTime exptectedDateTime, DateTime actualDateTime)

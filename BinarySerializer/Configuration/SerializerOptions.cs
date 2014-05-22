@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace BinarySerializer.Configuration
@@ -44,14 +42,22 @@ namespace BinarySerializer.Configuration
             set { this["compressorType"] = value; }
         }
 
-        public void Serialize(IBinarySerializationWriter writer)
+        /// <summary>
+        /// Allows an object to serialize its own data using the <paramref name="writer"/>
+        /// </summary>
+        /// <param name="writer">The <see cref="IBinarySerializationWriter"/> that is used to serialize the data.</param>
+        public void Serialize(IWriter writer)
         {
             writer.Write(CodePage);
             writer.Write(Threshold);
             writer.Write(Encoding.Unicode.GetBytes(CompressorType.AssemblyQualifiedName));
         }
 
-        public void Deserialize(IBinarySerializationReader reader)
+        /// <summary>
+        /// Allows an object to deserialize its own data using the <paramref name="reader"/>
+        /// </summary>
+        /// <param name="reader">The <see cref="IBinarySerializationReader"/> that is used to deserialize the object graph.</param>
+        public void Deserialize(IReader reader)
         {
             CodePage = reader.ReadUInt32();
             Threshold = reader.ReadUInt32();            

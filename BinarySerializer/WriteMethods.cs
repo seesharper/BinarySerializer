@@ -12,7 +12,6 @@
 
         private static readonly MethodInfo OpenGenericWriteBinarySerializableObjectMethod;
         private static readonly MethodInfo OpenGenericWriteSerializableObjectMethod;
-
         private static readonly MethodInfo OpenGenericWriteCollectionMethod;
 
         static WriteMethods()

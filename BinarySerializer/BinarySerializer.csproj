@@ -41,11 +41,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BinarySerializableReader.cs" />
+    <Compile Include="BinarySerializableWriter.cs" />
     <Compile Include="BinarySerializationReader.cs" />
     <Compile Include="BinarySerializationWriter.cs" />
     <Compile Include="Cache.cs" />
+    <Compile Include="IReader.cs" />
     <Compile Include="IWriteMethodFactory.cs" />
     <Compile Include="IWriteMethodSkeleton.cs" />
+    <Compile Include="IWriter.cs" />
     <Compile Include="KeyValueStorage.cs" />
     <Compile Include="PerThreadCache.cs" />
     <Compile Include="Configuration\SerializerOptions.cs" />
@@ -57,14 +61,18 @@
     <Compile Include="IStringCompressor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReadCache.cs" />
+    <Compile Include="Reader.cs" />
     <Compile Include="ReadMethods.cs" />
+    <Compile Include="ReferenceEqualsComparer.cs" />
     <Compile Include="TypeCode.cs" />
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="TypeHelper.cs" />
     <Compile Include="WriteCache.cs" />
+    <Compile Include="WriteMethodCache.cs" />
     <Compile Include="WriteMethodFactory.cs" />
     <Compile Include="WriteMethods.cs" />
     <Compile Include="WriteMethodSkeleton.cs" />
+    <Compile Include="Writer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

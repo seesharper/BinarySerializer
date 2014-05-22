@@ -63,6 +63,8 @@
         {
             WriterMethods.TryAdd(typeof(byte), (writer, value) => writer.Write((byte)value));
             WriterMethods.TryAdd(typeof(int), (writer, value) => writer.Write((int)value));
+
+            WriteMethodCache<byte>.Set((writer, value) => writer.Write(value));
         }
 
         private void WriteAssemblyVersion()
@@ -83,9 +85,7 @@
             var typeName = serializerOptions.CompressorType.AssemblyQualifiedName;            
             Write(Encoding.Unicode.GetBytes(typeName));
         }
-
         
-
         private static SerializerOptions GetSerializationOptions()
         {
             return GetSettings();            
@@ -820,7 +820,9 @@
                 }                
                 Write(type);
                 CreateWriteMethod<T>(type)(this, value);
-            }               
+            }
+
+            //WriteMethodCache<T>.Get()(value);
         }
 
         private Action<BinarySerializationWriter, T> CreateWriteMethod<T>(Type actualType)
@@ -846,7 +848,7 @@
                 else
                 {                                     
                     Write(cache.Add(value));                   
-                    value.Serialize(this);                    
+                    // value.Serialize(this);                    
                 }           
             }
         }

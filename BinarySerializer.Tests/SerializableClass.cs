@@ -18,12 +18,12 @@
     {
         public string Value { get; set; }
         
-        public void Serialize(IBinarySerializationWriter writer)
+        public void Serialize(IWriter writer)
         {
             writer.Write(Value);
         }
 
-        public void Deserialize(IBinarySerializationReader reader)
+        public void Deserialize(IReader reader)
         {
             Value = reader.ReadString();
         }

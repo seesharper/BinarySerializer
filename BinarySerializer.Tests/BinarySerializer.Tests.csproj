@@ -57,6 +57,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="AssemblyAssert.cs" />
+    <Compile Include="BinarySerializableTests.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="GenericSerializationTests.cs" />
     <Compile Include="MethodBuilderWriteMethodSkeleton.cs" />

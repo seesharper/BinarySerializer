@@ -37,12 +37,12 @@
         /// <param name="stream">The target <see cref="Stream"/></param>        
         public BinarySerializationReader(Stream stream)
         {
-            cache.Invalidate();
-            this.stream = stream;
-            this.VerifySerializerVersion();
-            options.Deserialize(this);
-            encoding = Encoding.GetEncoding((int)options.CodePage);
-            compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
+            //cache.Invalidate();
+            //this.stream = stream;
+            //this.VerifySerializerVersion();
+            //options.Deserialize(this);
+            //encoding = Encoding.GetEncoding((int)options.CodePage);
+            //compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
         }
 
         static BinarySerializationReader()
@@ -351,8 +351,7 @@
         /// <summary>
         /// Reads the next <see cref="double"/> from the current stream.
         /// </summary>
-        /// <returns>The next <see cref="double"/> read from the current stream.</returns>
-        [SecuritySafeCritical]
+        /// <returns>The next <see cref="double"/> read from the current stream.</returns>        
         public double ReadDouble()
         {
             stream.Read(buffer, 0, 8);
@@ -545,7 +544,7 @@
                 //Type type = this.ReadType();                
                 value = new T();
                 cache.Add(token, value);
-                ((IBinarySerializable)value).Deserialize(this);                
+                // ((IBinarySerializable)value).Deserialize(this);                
             }
             return value;
         }

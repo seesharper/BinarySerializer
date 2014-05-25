@@ -1,26 +1,12 @@
-﻿namespace BinarySerializer
+namespace BinarySerializer.Compression
 {
-    using System;
     using System.IO;
     using System.IO.Compression;
-    using System.Text;
-
+    
     /// <summary>
-    /// Represents a class that is capable of compressing and decompressing a byte array.
+    /// A <see cref="ICompressor"/> implementation that uses the <see cref="DeflateStream"/> class
+    /// to compress and uncompress a <see cref="byte"/> array.
     /// </summary>
-    public interface ICompressor
-    {
-        /// <summary>
-        /// Compresses a byte array.
-        /// </summary>
-        /// <param name="bytes">The <see cref="byte"/> array.</param>
-        /// <returns>The compressed <see cref="byte"/> array.</returns>
-        byte[] Compress(byte[] bytes);
-
-        byte[] Decompress(byte[] bytes, uint length);
-    }
-
-
     public class DeflateCompressor : ICompressor
     {
         public byte[] Compress(byte[] bytes)

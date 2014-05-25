@@ -6,6 +6,8 @@ namespace BinarySerializer.Configuration
     using System.ComponentModel;
     using System.Configuration;
 
+    using BinarySerializer.Compression;
+
     /// <summary>
     /// Represents the serialization options. 
     /// </summary>
@@ -45,19 +47,20 @@ namespace BinarySerializer.Configuration
         /// <summary>
         /// Allows an object to serialize its own data using the <paramref name="writer"/>
         /// </summary>
-        /// <param name="writer">The <see cref="IBinarySerializationWriter"/> that is used to serialize the data.</param>
-        public void Serialize(IWriter writer)
+        /// <param name="writer">The <see cref="ISerializer"/> that is used to serialize the data.</param>
+        public void Serialize(ISerializer writer)
         {
             writer.Write(CodePage);
             writer.Write(Threshold);
             writer.Write(Encoding.Unicode.GetBytes(CompressorType.AssemblyQualifiedName));
+           
         }
 
         /// <summary>
         /// Allows an object to deserialize its own data using the <paramref name="reader"/>
         /// </summary>
-        /// <param name="reader">The <see cref="IBinarySerializationReader"/> that is used to deserialize the object graph.</param>
-        public void Deserialize(IReader reader)
+        /// <param name="reader">The <see cref="IDeserializer"/> that is used to deserialize the object graph.</param>
+        public void Deserialize(IDeserializer reader)
         {
             CodePage = reader.ReadUInt32();
             Threshold = reader.ReadUInt32();            

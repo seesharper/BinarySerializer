@@ -14,7 +14,19 @@
             var instance = GetReader().ReadBinarySerializable();
             Assert.IsInstanceOfType(instance, typeof(BinarySerializableClass));
         }
-        
+
+        [TestMethod]
+        public void Write_NestedBinarySerializableClass_CanBeRead()
+        {
+            var nestedClass = new NestedBinarySerializableClass();
+            nestedClass.BinarySerializableClass = new BinarySerializableClass();
+            
+            GetWriter().Write(nestedClass);
+            var instance = (NestedBinarySerializableClass)GetReader().ReadBinarySerializable();
+            Assert.IsInstanceOfType(instance, typeof(NestedBinarySerializableClass));
+            Assert.IsInstanceOfType(instance.BinarySerializableClass, typeof(BinarySerializableClass));
+        }
+
         
         
         
@@ -24,6 +36,7 @@
         {
             stream.SetLength(0);
             return new Writer(stream);
+            
         }
 
         private IReader GetReader()

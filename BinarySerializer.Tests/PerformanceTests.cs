@@ -275,7 +275,7 @@
             stopwatch.Start();
             for (int i = 0; i < iterations; i++)
             {
-                EnumHelper.GetUnderLyingEnumType(typeof(StringSplitOptions));
+                EnumHelper.GetUnderlyingEnumType(typeof(StringSplitOptions));
             }
             stopwatch.Stop();
             long cachedUnderlyingTypeDuration = stopwatch.ElapsedMilliseconds;

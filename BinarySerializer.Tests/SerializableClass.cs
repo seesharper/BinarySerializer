@@ -18,14 +18,44 @@
     {
         public string Value { get; set; }
         
-        public void Serialize(IWriter writer)
+        public void Serialize(ISerializer writer)
         {
             writer.Write(Value);
         }
 
-        public void Deserialize(IReader reader)
+        public void Deserialize(IDeserializer reader)
         {
             Value = reader.ReadString();
+        }
+    }
+
+    public class AnotherBinarySerializableClass : IBinarySerializable
+    {
+        public string Value { get; set; }
+
+        public void Serialize(ISerializer writer)
+        {
+            writer.Write(Value);
+        }
+
+        public void Deserialize(IDeserializer reader)
+        {
+            Value = reader.ReadString();
+        }
+    }
+
+    public class NestedBinarySerializableClass : IBinarySerializable
+    {
+        public BinarySerializableClass BinarySerializableClass { get; set; }
+        
+        public void Serialize(ISerializer writer)
+        {
+            writer.Write(BinarySerializableClass);
+        }
+
+        public void Deserialize(IDeserializer reader)
+        {
+            BinarySerializableClass = (BinarySerializableClass)reader.ReadBinarySerializable();
         }
     }
 

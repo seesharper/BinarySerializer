@@ -1,127 +1,56 @@
 ﻿namespace BinarySerializer
 {
     using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Reflection;
+    using System.Reflection.Emit;
 
-    public static class WriteMethods
+    
+    public static class WriteMethods<T>
     {
-        private static ConcurrentDictionary<Type,MethodInfo> Methods = new ConcurrentDictionary<Type, MethodInfo>();
+        private static readonly Lazy<Action<IWriter, T>> Cache = new Lazy<Action<IWriter, T>>(CreateWriteMethod);
 
-        private static readonly MethodInfo OpenGenericWriteBinarySerializableObjectMethod;
-        private static readonly MethodInfo OpenGenericWriteSerializableObjectMethod;
-        private static readonly MethodInfo OpenGenericWriteCollectionMethod;
-
-        static WriteMethods()
+        public static Action<IWriter, T> Get()
         {
-            OpenGenericWriteBinarySerializableObjectMethod = typeof(BinarySerializationWriter).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m => m.IsGenericMethod && m.Name == "WriteBinarySerializableObject");
-            OpenGenericWriteSerializableObjectMethod = typeof(BinarySerializationWriter).GetMethod(
-                "WriteSerializableObject", BindingFlags.NonPublic | BindingFlags.Instance);
-            OpenGenericWriteCollectionMethod = typeof(BinarySerializationWriter).GetMethod("WriteCollectionInternal", BindingFlags.NonPublic | BindingFlags.Instance);
-        }
-        
-        public static MethodInfo GetWriteMethod(Type actualType)
-        {
-            return Methods.GetOrAdd(actualType, ResolveWriteMethod);
+            return Cache.Value;
         }
 
-        private static MethodInfo ResolveWriteMethod(Type actualType)
+        private static Action<IWriter, T> CreateWriteMethod()
         {
+            var dynamicMethod = new DynamicMethod("DynamicWriteMethod", typeof(void), new Type[] { typeof(IWriter), typeof(T) }, typeof(Writer).Module);
+
+            Type actualType = typeof(T);
+
+            if (actualType.IsEnum)
+            {
+                actualType = EnumHelper.GetUnderlyingEnumType(typeof(T));
+            }
+
+            MethodInfo method;
             if (actualType.IsNullable())
             {
-                actualType = Nullable.GetUnderlyingType(actualType);
+                method = typeof(ISerializer).GetMethod("Write", new[] { actualType });
+            }
+            else
+            {
+                method = typeof(IWriter).GetMethod("Write", new[] { actualType });    
+            }
+
+            
+
+            if (method == null)
+            {
+                method = typeof(ISerializer).GetMethod("Write", new[] { actualType });
             }
             
-            MethodInfo method = typeof(BinarySerializationWriter).GetMethod("Write", new[] { actualType });
-            if (method != null)
-            {
-                return method;
-            }
 
-            if (typeof(IBinarySerializable).IsAssignableFrom(actualType))
-            {
-                MethodInfo closedGenericWriteMethod = OpenGenericWriteBinarySerializableObjectMethod.MakeGenericMethod(actualType);
-                return closedGenericWriteMethod;
-            }
+            var il = dynamicMethod.GetILGenerator();
 
-            Type collectionType = actualType.GetCollectionType();
-            if (collectionType != null)
-            {
-                Type elementType = collectionType.GetGenericArguments().First();
-                return OpenGenericWriteCollectionMethod.MakeGenericMethod(elementType);
-            }
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);            
+            il.Emit(OpCodes.Callvirt, method);
+            il.Emit(OpCodes.Ret);
 
-            if (actualType.IsEnum)
-            {
-                return ResolveWriteMethod(Enum.GetUnderlyingType(actualType));
-            }
-
-            var underlyingType = Nullable.GetUnderlyingType(actualType);
-            if (underlyingType != null)
-            {
-                if (underlyingType.IsEnum)
-                {
-                    underlyingType = Enum.GetUnderlyingType(underlyingType);
-                }
-
-                var nullableUnderlyingType = typeof(Nullable<>).MakeGenericType(underlyingType);
-                return ResolveWriteMethod(nullableUnderlyingType);
-            }
-
-
-
-
-            MethodInfo closedGenericWriteSerializableObjectMethod = OpenGenericWriteSerializableObjectMethod.MakeGenericMethod(actualType);
-            return closedGenericWriteSerializableObjectMethod;
+            return (Action<IWriter, T>)dynamicMethod.CreateDelegate(typeof(Action<IWriter, T>));
         }
-
-        private static MethodInfo ResolveWriteMethod_old(Type actualType)
-        {
-            MethodInfo method = typeof(BinarySerializationWriter).GetMethod("Write", new[] { actualType });
-            if (method != null)
-            {
-                return method;
-            }
-            
-            if (typeof(IBinarySerializable).IsAssignableFrom(actualType))
-            {
-                MethodInfo closedGenericWriteMethod = OpenGenericWriteBinarySerializableObjectMethod.MakeGenericMethod(actualType);
-                return closedGenericWriteMethod;
-            }
-
-            Type collectionType = actualType.GetCollectionType();
-            if (collectionType != null)
-            {
-                Type elementType = collectionType.GetGenericArguments().First();
-                return OpenGenericWriteCollectionMethod.MakeGenericMethod(elementType);
-            }
-           
-            if (actualType.IsEnum)
-            {                
-                return ResolveWriteMethod(Enum.GetUnderlyingType(actualType));
-            }
-
-            var underlyingType = Nullable.GetUnderlyingType(actualType);
-            if (underlyingType != null)
-            {
-                if (underlyingType.IsEnum)
-                {
-                    underlyingType = Enum.GetUnderlyingType(underlyingType);
-                }
-                
-                var nullableUnderlyingType = typeof(Nullable<>).MakeGenericType(underlyingType);
-                return ResolveWriteMethod(nullableUnderlyingType);
-            }
-            
-            
-
-
-            MethodInfo closedGenericWriteSerializableObjectMethod = OpenGenericWriteSerializableObjectMethod.MakeGenericMethod(actualType);
-            return closedGenericWriteSerializableObjectMethod;
-        }
-
-
     }
 }

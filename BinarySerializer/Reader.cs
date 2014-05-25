@@ -1,54 +1,40 @@
 ﻿namespace BinarySerializer
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
-    using System.Reflection;
-    using System.Reflection.Emit;
-    using System.Runtime.Serialization.Formatters.Binary;
-    using System.Security;
     using System.Text;
+
+    using BinarySerializer.Compression;
     using BinarySerializer.Configuration;
-    /// <summary>
-    /// A class that is capable of deserializing an object graph from a byte stream. 
-    /// </summary>        
-    public class BinarySerializationReader : IBinarySerializationReader
+
+    public class Reader : IReader
     {
         private Stream stream;
         private readonly byte[] buffer = new byte[0x10];
-        
-        private ReadCache cache = new ReadCache();
-
-        private readonly IDictionary<ulong, string> stringCache = new Dictionary<ulong, string>();
-        private readonly IDictionary<ulong, object> objectCache = new Dictionary<ulong, object>();
-        private Encoding encoding;
-
-        private static readonly ConcurrentDictionary<Type, Func<BinarySerializationReader, object>> ReadMethods = new ConcurrentDictionary<Type, Func<BinarySerializationReader, object>>(); 
-
-        private readonly SerializerOptions options = new SerializerOptions();
-
         private readonly ICompressor compressor;
 
+        private readonly SerializerOptions options;
+        private Encoding encoding;
+        private readonly IDictionary<ulong, string> stringCache = new Dictionary<ulong, string>();
+        private readonly IDictionary<ulong, object> readCache = new Dictionary<ulong, object>();
+        
+        
         /// <summary>
-        /// Initializes a new instance of the <see cref="BinarySerializationReader"/> class.
+        /// Initializes a new instance of the <see cref="BinarySerializationReader_old"/> class.
         /// </summary>
         /// <param name="stream">The target <see cref="Stream"/></param>        
-        public BinarySerializationReader(Stream stream)
-        {
-            //cache.Invalidate();
-            //this.stream = stream;
-            //this.VerifySerializerVersion();
-            //options.Deserialize(this);
-            //encoding = Encoding.GetEncoding((int)options.CodePage);
-            //compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
+        public Reader(Stream stream)
+        {         
+            this.stream = stream;
+            VerifySerializerVersion();
+            options = new SerializerOptions();
+            options.Deserialize(new Deserializer(this));
+            encoding = Encoding.GetEncoding((int)options.CodePage);
+            compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
         }
 
-        static BinarySerializationReader()
-        {
-            ReadMethods.TryAdd(typeof(byte), (reader) => reader.ReadByte());            
-        }
 
         /// <summary>
         /// Reads an <see cref="short"/> from the current stream.
@@ -75,7 +61,7 @@
         /// <returns>A nullable <see cref="ushort"/> read from the current stream.</returns>
         public ushort? ReadNullableUInt16()
         {
-            return ReadBoolean() ? (ushort?)null : ReadUInt16();            
+            return ReadBoolean() ? (ushort?)null : ReadUInt16();
         }
 
         /// <summary>
@@ -83,7 +69,7 @@
         /// </summary>
         /// <returns>An <see cref="short"/> read from the current stream.</returns>
         public short ReadInt16()
-        {                        
+        {
             byte firstByte = this.ReadByte();
 
             // Check bit number six to see if the value is int.MinValue
@@ -151,7 +137,7 @@
         /// </summary>
         /// <returns>An <see cref="int"/> read from the current stream.</returns>
         public int ReadInt32()
-        {            
+        {
             byte firstByte = this.ReadByte();
 
             // Check bit number six to see if the value is int.MinValue
@@ -164,15 +150,15 @@
             int result = firstByte & 0x1f;
             int bitShift = 5;
             byte nextByte = firstByte;
-            
+
             // Check the eight bit to see if we must read another byte. 
             while ((nextByte & 0x80) != 0)
             {
                 nextByte = this.ReadByte();
                 result |= (nextByte & 0x7f) << bitShift;
-                bitShift += 7;                    
+                bitShift += 7;
             }
-            
+
             // Check the seventh bit of the first byte to see if we must negate the result.
             return (firstByte & 0x40) == 0x40 ? -result : result;
         }
@@ -269,17 +255,10 @@
         /// <returns>The next <see cref="byte"/> array read from the current stream.</returns>
         public byte[] ReadBytes()
         {
-            ulong metadata = ReadUInt64();
+            uint length = ReadUInt32();
             
-            // Check the first bit of the metadata to determine if the value is null.
-            if ((metadata & 0x1) == 0x1)
-            {
-                return null;
-            }
-
-            int length = (int)metadata >> 1;
             var readBuffer = new byte[length];
-            stream.Read(readBuffer, 0, length);
+            stream.Read(readBuffer, 0, (int)length);
             return readBuffer;
         }
 
@@ -404,10 +383,10 @@
                 int minute = packedTime[DateTimeBitVectorSections.Minute];
                 int second = packedTime[DateTimeBitVectorSections.Second];
                 int milliSecond = packedTime[DateTimeBitVectorSections.MilliSecond];
-                return new DateTime(year, month, day, hour, minute, second, milliSecond);                
+                return new DateTime(year, month, day, hour, minute, second, milliSecond);
             }
-            
-            return new DateTime(year, month, day);            
+
+            return new DateTime(year, month, day);
         }
 
         /// <summary>
@@ -435,7 +414,7 @@
         public bool? ReadNullableBoolean()
         {
             byte byteRead = ReadByte();
-            
+
             // Check the second bit to see if the value is null.
             if ((byteRead & 0x2) == 0x2)
             {
@@ -446,31 +425,31 @@
         }
 
         public string ReadString()
-        {                        
+        {
             var metadata = ReadUInt64();
             if (metadata == 0)
             {
                 return null;
             }
-            
-            ulong token = metadata >> 1; 
-                       
+
+            ulong token = metadata >> 1;
+
             string stringValue;
             stringCache.TryGetValue(token, out stringValue);
             if (stringValue == null)
             {
                 byte[] stringBuffer;
-                                
+
                 // Check the first bit to determine if the string is compressed.
                 if ((metadata & 0x1) == 0x1)
                 {
                     uint length = ReadUInt32();
-                    stringBuffer = ReadBytes();                
+                    stringBuffer = ReadBytes();
                     stringBuffer = compressor.Decompress(stringBuffer, length);
                 }
                 else
                 {
-                    stringBuffer = ReadBytes();                
+                    stringBuffer = ReadBytes();
                 }
                 stringValue = encoding.GetString(stringBuffer);
                 stringCache.Add(token, stringValue);
@@ -479,176 +458,78 @@
             return stringValue;
         }
 
-        public T Read<T>()
+        public object ReadObject()
         {
-            Type type = ReadType();
-            if (type == null)
-            {
-                return default(T);
-            }
-            Func<BinarySerializationReader, T> readMethod = CreateReadMethod<T>(type);
-
-            return readMethod(this);
-        }
-
-
-        //private Func<BinarySerializationReader, object> GetReadMethod(Type type)
-        //{
-        //    return ReadMethods.GetOrAdd(type, ResolveReadMethod);
-        //}
-
-        //private Func<BinarySerializationReader, object> ResolveReadMethod(Type type)
-        //{
-        //    if (typeof(IBinarySerializable).IsAssignableFrom(type))
-        //    {
-        //        return reader => reader.ReadBinarySerializableObject();
-        //    }
-
-
-        //    return reader => reader.ReadSerializableObject();
-        //}
-
-        private Func<BinarySerializationReader, T> CreateReadMethod<T>(Type actualType)
-        {
-            var dynamicMethod = new DynamicMethod("DynamicMethod", typeof(T), new[] { typeof(BinarySerializationReader) }, typeof(BinarySerializationReader).Module);
-            ILGenerator il = dynamicMethod.GetILGenerator();
-            var methodInfo = BinarySerializer.ReadMethods.GetReadMethod(actualType);
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Call, methodInfo);
-            if (!typeof(T).IsValueType && actualType.IsValueType)
-            {
-                il.Emit(OpCodes.Box, actualType);
-            }
-            // Todo check T to see if we need to box the value
-
-            il.Emit(OpCodes.Ret);
-            return (Func<BinarySerializationReader, T>)dynamicMethod.CreateDelegate(typeof(Func<BinarySerializationReader, T>));
-        }
-
-
-        /// <summary>
-        /// Reads the next <see cref="IBinarySerializable"/> object from the current stream.
-        /// </summary>        
-        /// <returns>The next <see cref="IBinarySerializable"/> object read from the current stream.</returns>
-        internal T ReadBinarySerializableObject<T>() where T : IBinarySerializable, new() 
-        {
-            var token = ReadUInt64();
-            if (token == 0)
-            {
-                return default(T);
-            }
-
-            T value;
-            if (!cache.TryGetValue(token, out value))
-            {
-                //Type type = this.ReadType();                
-                value = new T();
-                cache.Add(token, value);
-                // ((IBinarySerializable)value).Deserialize(this);                
-            }
-            return value;
+            throw new NotImplementedException();
         }
 
         public Type ReadType()
         {
-            byte typeCode = ReadByte();
-            if (typeCode == TypeCodes.Null)
+            return TypeHelper.GetType(ReadString());
+        }
+
+        public IBinarySerializable ReadBinarySerializable()
+        {
+            var token = ReadUInt64();
+            if (token == 0)
             {
                 return null;
             }
 
-            if (typeCode <= TypeCodes.String)
+            object value;
+            if (!readCache.TryGetValue(token, out value))
             {
-                return TypeCodes.GetType(typeCode);
+
+                var type = ReadType();
+                value = Activator.CreateInstance(type);
+                readCache.Add(token, value);
+
+                var reader = new Deserializer(this);
+                ((IBinarySerializable)value).Deserialize(reader);                
             }
 
-            return TypeHelper.GetType(ReadString());
+            return (IBinarySerializable)value;
+
+
+            
         }
 
-        internal TCollection ReadCollectionInternal<TCollection, TValue>() where TCollection : ICollection<TValue>, new()
+        public TValue ReadEnum<TValue>()
         {
-            ulong token = ReadUInt64();
-            if (token == 0)
+            return ReadMethods<TValue>.Get()(this);
+        }
+
+        public ICollection<TValue> ReadCollection<TValue>()
+        {
+            var token = ReadUInt64();
+
+            object value;
+            if (readCache.TryGetValue(token, out value))
             {
-                return default(TCollection);
+                return (ICollection<TValue>)value;
             }
-            
-            TCollection collection;            
-            if (!cache.TryGetValue(token, out collection))
+
+            var type = ReadType();
+            var collection = (ICollection<TValue>)Activator.CreateInstance(type);
+            readCache.Add(token, collection);
+            var reader = new Deserializer(this);
+            var readMethod = ReadMethods<TValue>.Get();
+            for (int i = 0; i < reader.WriteCount; i++)
             {
-                collection  = new TCollection();
-                cache.Add(token, collection);
-                uint count = ReadUInt32();
-                for (uint i = 0; i < count; i++)
-                {
-                    collection.Add(Read<TValue>());
-                }
+                collection.Add(readMethod(reader));
             }
 
             return collection;
         }
-         
-     
 
-        private object Activate(Type type)
+        private void VerifySerializerVersion()
         {
-            return Cache<Type, Func<object>>.GetOrAdd(type, CreateActivatorDelegate)();
-        }
-
-        private Func<object> CreateActivatorDelegate(Type type)
-        {
-            ConstructorInfo constructorInfo = Cache<Type, ConstructorInfo>.GetOrAdd(type, GetConstructorInfo);
-            var dynamicMethod = new DynamicMethod("ActivatorMethod", typeof(object),Type.EmptyTypes,type.Module);
-            ILGenerator il = dynamicMethod.GetILGenerator();
-            il.Emit(OpCodes.Newobj, constructorInfo);
-            il.Emit(OpCodes.Ret);
-            return (Func<object>)dynamicMethod.CreateDelegate(typeof(Func<object>));
-        }
-
-        private ConstructorInfo GetConstructorInfo(Type type)
-        {
-            return type.GetConstructor(Type.EmptyTypes);
-        }
-
-        private object ReadSerializableObject()
-        {
-            ulong token = ReadUInt64();
-            object value;
-            if (!objectCache.TryGetValue(token, out value))
+            Version thisVersion = typeof(IReader).Assembly.GetName().Version;
+            Version streamVersion = new Version((int)this.ReadUInt32(), (int)this.ReadUInt32(), (int)this.ReadUInt32(), (int)this.ReadUInt32());
+            if (thisVersion != streamVersion)
             {
-                var binaryFormatter = new BinaryFormatter();
-                value = binaryFormatter.Deserialize(stream);
-                objectCache.Add(token, value);
+                throw new InvalidOperationException();
             }
-            return value;
         }
-
-        
-
-         private Func<object> GetObjectReadMethod(byte typeCode)
-         {
-             if (typeCode == TypeCodes.Byte)
-             {
-                 Func<object> method = () => (object)ReadByte();
-                 return method;
-             }
-
-             if (typeCode == TypeCodes.Object)
-             {
-                 return ReadSerializableObject;                 
-             }
-
-             throw new NotSupportedException();
-         }
-
-         private void VerifySerializerVersion()
-         {
-             Version thisVersion = typeof(BinarySerializationWriter).Assembly.GetName().Version;
-             Version streamVersion = new Version((int)this.ReadUInt32(), (int)this.ReadUInt32(), (int)this.ReadUInt32(), (int)this.ReadUInt32());
-             if (thisVersion != streamVersion)
-             {
-                 throw new InvalidOperationException();
-             }
-         }
     }
 }

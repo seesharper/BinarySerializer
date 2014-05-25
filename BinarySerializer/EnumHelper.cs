@@ -5,16 +5,39 @@
 
     public static class EnumHelper
     {
-        private static ConcurrentDictionary<Type,Type> cache = new ConcurrentDictionary<Type, Type>();
+        private static readonly ConcurrentDictionary<Type, Type> Cache = new ConcurrentDictionary<Type, Type>();
     
-        public static Type GetUnderLyingEnumType(Type type)
+        public static Type GetUnderlyingEnumType(Type type)
         {
-            return cache.GetOrAdd(type, ResolveUnderlyingEnumType);
+            return Cache.GetOrAdd(type, ResolveUnderlyingEnumType);
         }
+
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         private static Type ResolveUnderlyingEnumType(Type enumType)
         {
             return Enum.GetUnderlyingType(enumType);
         }
+
+
+        
+
     }
 }

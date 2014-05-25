@@ -1,100 +1,56 @@
 ﻿namespace BinarySerializer
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
     using System.Collections.Specialized;
     using System.Configuration;
     using System.IO;
-    using System.Reflection;
-    using System.Reflection.Emit;
-    using System.Runtime.Serialization.Formatters.Binary;
+    using System.Linq;
     using System.Text;
 
+    using BinarySerializer.Compression;
     using BinarySerializer.Configuration;
 
-    /// <summary>
-    /// A class that is capable of serializing an object graph to a byte stream.
-    /// </summary>
-    public class BinarySerializationWriter : IBinarySerializationWriter
-    {       
-        private Stream stream;
-
-        private WriteCache cache = new WriteCache();
-
-        private readonly SerializerOptions options;
+    public class Writer : IWriter
+    {
+        private readonly Stream stream;
 
         private readonly byte[] buffer = new byte[0x10];
 
         private readonly Dictionary<string, ulong> stringCache = new Dictionary<string, ulong>();
-        private readonly IDictionary<object, ulong> objectCache = new Dictionary<object, ulong>();
+
+        private readonly Dictionary<object, ulong> writeCache = new Dictionary<object, ulong>(new ReferenceEqualsComparer());
 
         private readonly Encoding encoding;
 
-        private ICompressor compressor;
+        private readonly SerializerOptions options;
 
-        private static readonly ConcurrentDictionary<Type, Action<BinarySerializationWriter, object>> WriterMethods = new ConcurrentDictionary<Type, Action<BinarySerializationWriter, object>>();
+        private readonly ICompressor compressor;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BinarySerializationWriter"/> class.
+       /// <summary>
+        /// Initializes a new instance of the <see cref="BinarySerializationWriter_old"/> class.
         /// </summary>
         /// <param name="stream">
         /// The target <see cref="Stream"/> to to write to.
         /// </param>
-        public BinarySerializationWriter(Stream stream):this(stream, GetSerializationOptions())
-        {
-            cache.Invalidate();    
+        public Writer(Stream stream):this(stream, GetSerializationOptions())
+        {            
         }
-        public BinarySerializationWriter(Stream stream, SerializerOptions options)
-        {
-            WriteMethodFactory = new WriteMethodFactory(new WriteMethodSkeleton());
+
+        public Writer(Stream stream, SerializerOptions options)
+        {            
             this.stream = stream;
             this.options = options;
-            WriteAssemblyVersion();
-            WriteSerializerOptions(options);
             encoding = Encoding.GetEncoding((int)options.CodePage);
+            WriteAssemblyVersion();
+            using (var writer = new Serializer(this))
+            {
+                options.Serialize(writer);
+            }
+                        
             compressor = (ICompressor)Activator.CreateInstance(options.CompressorType);
         }
 
-        public IWriteMethodFactory WriteMethodFactory { get; set; }
-
-        static BinarySerializationWriter()
-        {
-            WriterMethods.TryAdd(typeof(byte), (writer, value) => writer.Write((byte)value));
-            WriterMethods.TryAdd(typeof(int), (writer, value) => writer.Write((int)value));
-
-            WriteMethodCache<byte>.Set((writer, value) => writer.Write(value));
-        }
-
-        private void WriteAssemblyVersion()
-        {
-            Version assembly = typeof(BinarySerializationWriter).Assembly.GetName().Version;
-            this.Write(assembly.Major);
-            this.Write(assembly.Minor);
-            this.Write(assembly.Build);
-            this.Write(assembly.Revision);
-        }
-
-       
-
-        private void WriteSerializerOptions(SerializerOptions serializerOptions)
-        {
-            Write(serializerOptions.CodePage);
-            Write(serializerOptions.Threshold);
-            var typeName = serializerOptions.CompressorType.AssemblyQualifiedName;            
-            Write(Encoding.Unicode.GetBytes(typeName));
-        }
-        
-        private static SerializerOptions GetSerializationOptions()
-        {
-            return GetSettings();            
-        }
-
-        private static SerializerOptions GetSettings()
-        {
-            return (SerializerOptions)ConfigurationManager.GetSection("binarySerializer") ?? new SerializerOptions();            
-        }
 
 
         /// <summary>
@@ -104,10 +60,10 @@
         public void Write(ushort value)
         {
             byte bufferIndex = 0;
-            
+
             // Continue to write the remaining bytes until the value can fit within 7 bytes.
             while (value >= 0x80)
-            {             
+            {
                 buffer[bufferIndex] = (byte)(value | 0x80);
                 value >>= 7;
                 bufferIndex++;
@@ -134,12 +90,13 @@
             }
         }
 
+
         /// <summary>
         /// Writes a <see cref="short"/> value to the current stream.
         /// </summary>
         /// <param name="value">The <see cref="short"/> value to write.</param>
         public void Write(short value)
-        {            
+        {
             byte bufferIndex = 0;
 
             // Same as Math.Abs(value), only faster
@@ -189,6 +146,7 @@
 
             this.stream.Write(this.buffer, 0, bufferIndex + 1);
         }
+
 
         /// <summary>
         /// Writes a nullable <see cref="short"/> value to the current stream.
@@ -433,7 +391,7 @@
         /// <param name="value">The <see cref="byte"/> value to write.</param>
         public void Write(byte value)
         {
-            this.WriteByte(value);
+            stream.WriteByte(value);
         }
 
         /// <summary>
@@ -441,24 +399,10 @@
         /// </summary>
         /// <param name="bytes">The <see cref="byte"/> array to write.</param>
         public void Write(byte[] bytes)
-        {            
-            if (bytes == null)
-            {
-                // Set the first bit to indicate that the value is null.
-                Write((ulong)0x1);
-            }
-            else
-            {
-                int length = bytes.Length;
-                ulong metadata = (ulong)length << 1;
-                Write(metadata);
-                stream.Write(bytes, 0, length);
-            }
-        }
-
-        private void WriteByte(byte value)
-        {
-            this.stream.WriteByte(value);
+        {                       
+            int length = bytes.Length;            
+            Write((uint)length);
+            stream.Write(bytes, 0, length);            
         }
 
         /// <summary>
@@ -492,16 +436,8 @@
         /// </summary>
         /// <param name="value">The <see cref="sbyte"/> value to write.</param>
         public void Write(sbyte? value)
-        {
-            if (value == null)
-            {
-                Write(true);
-            }
-            else
-            {
-                Write(false);
-                Write(value.Value);
-            }
+        {           
+            Write((sbyte)value);            
         }
 
         /// <summary>
@@ -510,7 +446,7 @@
         /// <param name="value">The <see cref="decimal"/> value to write.</param>
         public void Write(decimal value)
         {
-            var bits = decimal.GetBits(value);            
+            var bits = decimal.GetBits(value);
             Write(bits[0]);
             Write(bits[1]);
             Write(bits[2]);
@@ -531,7 +467,7 @@
             {
                 Write(false);
                 Write(value.Value);
-            }            
+            }
         }
 
         /// <summary>
@@ -562,7 +498,7 @@
             {
                 Write(false);
                 Write(value.Value);
-            }            
+            }
         }
 
         /// <summary>
@@ -570,8 +506,8 @@
         /// </summary>
         /// <param name="value">The <see cref="double"/> value to write.</param>
         public unsafe void Write(double value)
-        {                                    
-            ulong num = *((ulong*)&value);           
+        {
+            ulong num = *((ulong*)&value);
             this.buffer[0] = (byte)num;
             this.buffer[1] = (byte)(num >> 8);
             this.buffer[2] = (byte)(num >> 0x10);
@@ -579,7 +515,7 @@
             this.buffer[4] = (byte)(num >> 0x20);
             this.buffer[5] = (byte)(num >> 40);
             this.buffer[6] = (byte)(num >> 0x30);
-            this.buffer[7] = (byte)(num >> 0x38);                       
+            this.buffer[7] = (byte)(num >> 0x38);
             this.stream.Write(this.buffer, 0, 8);
         }
 
@@ -597,7 +533,7 @@
             {
                 Write(false);
                 Write(value.Value);
-            }            
+            }
         }
 
         /// <summary>
@@ -623,7 +559,7 @@
             {
                 Write(false);
                 Write(value.Value);
-            }            
+            }
         }
 
         /// <summary>
@@ -664,7 +600,7 @@
             {
                 Write(false);
                 Write(value.Value);
-            }            
+            }
         }
 
         /// <summary>
@@ -692,7 +628,7 @@
             {
                 byteToWrite = value.Value ? ((byte)1) : ((byte)0);
             }
-            
+
             Write(byteToWrite);
         }
 
@@ -701,10 +637,10 @@
         /// </summary>
         /// <param name="value">The <see cref="string"/> value to write.</param>
         public void Write(string value)
-        {            
+        {
             if (value == null)
-            {                
-                //Write a zero token to indicate that the value is null;
+            {
+                // Write a zero token to indicate that the value is null;                
                 Write((ulong)0);
             }
             else
@@ -718,122 +654,52 @@
                 {
                     token = (ulong)stringCache.Count + 1;
                     token = token << 1;
-                    
+
                     byte[] bytes = encoding.GetBytes(value);
-                    int length = bytes.Length; 
+                    int length = bytes.Length;
                     if (length >= options.Threshold)
                     {
                         bytes = compressor.Compress(bytes);
+                        
                         // Use the first bit to indicate that the value is compressed.
                         token = (byte)(token | 0x1);
                         Write(token);
                         Write((uint)length);
-                        Write(bytes); 
+                        Write(bytes);
                     }
                     else
                     {
                         Write(token);
-                        Write(bytes); 
-                    }                   
+                        Write(bytes);
+                    }
+
                     stringCache.Add(value, token);
-                }                
-            }            
-        }
-             
-        internal void WriteCollectionInternal<T>(ICollection<T> collection)
-        {
-            ulong token;
-            if (cache.TryGetValue(collection, out token))
-            {
-                this.Write(token);
-            }
-            else
-            {                             
-                Write(cache.Add(collection));                
-                Write((uint)collection.Count);                                
-                foreach (var value in collection)
-                {
-                    Write(value);
                 }
             }
         }
-      
-        internal void WriteSerializableObject(object value)
+
+        public void Write<T>(T value)
         {
-            ulong token;
-            if (objectCache.TryGetValue(value, out token))
-            {
-                Write(token);
-            }
-            else
-            {
-                token = (ulong)objectCache.Count + 1;
-                objectCache.Add(value, token);
-                Write(token);
-                var binaryFormatter = new BinaryFormatter();
-                binaryFormatter.Serialize(stream, value);
-            }            
+            WriteMethods<T>.Get()(this, value);
         }
-       
 
 
-
-        private Action<BinarySerializationWriter,object> GetWriteMethod(Type type)
+        public void Write(object value)
         {
-            return WriterMethods.GetOrAdd(type, t => ResolveWriteMethod(t));
-
+            Type type = value.GetType();
+            var method =
+                typeof(Writer).GetMethods().FirstOrDefault(m => m.Name == "Write" && m.IsGenericMethod && m.GetGenericArguments().Count() == 1);
+            var closedGenericMethod = method.MakeGenericMethod(type);
+            closedGenericMethod.Invoke(this, new[] { value });                        
         }
 
-        private Action<BinarySerializationWriter, object> ResolveWriteMethod(Type type)
+        public void Write(Type value)
         {
-            Type collectionType = type.GetCollectionType();
-            if (collectionType != null)
-            {
-                
-            }
-
-            return (writer, value) => writer.WriteSerializableObject(value);
+            Write(value.AssemblyQualifiedName);
         }
 
-        private Action<object> GetObjectWriteMethod(Type type)
+        public void Write(IBinarySerializable value)
         {
-            if (type == typeof(byte))
-            {
-                return value => WriteByte((byte)value);                               
-            }
-
-            return this.WriteSerializableObject;
-        }
-
-        public void Write<T>(T value) 
-        {            
-            if (value == null)
-            {
-                Write(TypeCodes.Null);
-            }
-            else
-            {
-                Type type = typeof(T);
-                if (!type.IsSealed)
-                {
-                    type = value.GetType();
-                }                
-                Write(type);
-                CreateWriteMethod<T>(type)(this, value);
-            }
-
-            //WriteMethodCache<T>.Get()(value);
-        }
-
-        private Action<BinarySerializationWriter, T> CreateWriteMethod<T>(Type actualType)
-        {
-            return WriteMethodFactory.CreateWriteMethod<T>(actualType);                     
-        }
-
-        
-
-        internal void WriteBinarySerializableObject<T>(T value) where T : IBinarySerializable, new()
-        {            
             if (value == null)
             {
                 Write((ulong)0);
@@ -841,43 +707,72 @@
             else
             {
                 ulong token;
-                if (cache.TryGetValue(value, out token))
+                if (writeCache.TryGetValue(value, out token))
                 {
                     Write(token);
                 }
                 else
-                {                                     
-                    Write(cache.Add(value));                   
-                    // value.Serialize(this);                    
-                }           
-            }
+                {
+                    token = (ulong)writeCache.Count + 1;
+                    writeCache.Add(value, token);
+                    Write(token);
+                    Write(value.GetType());
+                    using (var writer = new Serializer(this))
+                    {
+                        value.Serialize(writer);
+                    }                                        
+                }
+            }                                    
         }
 
-        
-
-
-        public void Write(Type type)
+        public void WriteEnum<T>(T value)
         {
-            if (type == null)
+            WriteMethods<T>.Get()(this, value);
+        }
+
+        public void WriteCollection<TValue>(ICollection<TValue> collection)
+        {
+            var writeMethod = WriteMethods<TValue>.Get();
+            ulong token;
+            if (writeCache.TryGetValue(collection, out token))
             {
-                Write(TypeCodes.Null);
+                Write(token);
             }
             else
             {
-                byte typeCode = TypeCodes.GetTypeCode(type);
-                Write(typeCode);
-                if (typeCode >= TypeCodes.Array)
+                token = (ulong)writeCache.Count + 1;
+                writeCache.Add(collection, token);
+                Write(token);
+                Write(collection.GetType());
+
+                using (var writer = new Serializer(this))
                 {
-                    Write(type.AssemblyQualifiedName);
-                }                
-            }            
-            
+                    foreach (var value in collection)
+                    {
+                        writeMethod(writer, value);
+                    }
+                }    
+            }
+
         }
 
-        public void Write<TKey, TValue>(IDictionary<TKey, TValue> dictionary)
+        private static SerializerOptions GetSerializationOptions()
         {
-            throw new NotImplementedException();
+            return GetSettings();
         }
-              
+
+        private static SerializerOptions GetSettings()
+        {
+            return (SerializerOptions)ConfigurationManager.GetSection("binarySerializer") ?? new SerializerOptions();
+        }
+
+        private void WriteAssemblyVersion()
+        {
+            Version assembly = typeof(IReader).Assembly.GetName().Version;
+            this.Write(assembly.Major);
+            this.Write(assembly.Minor);
+            this.Write(assembly.Build);
+            this.Write(assembly.Revision);
+        }
     }
 }

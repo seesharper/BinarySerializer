@@ -37,6 +37,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Build.Utilities.v4.0" />
+    <Reference Include="Moq">
+      <HintPath>..\packages\Moq.4.2.1402.2112\lib\net40\Moq.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core">
@@ -62,6 +65,7 @@
     <Compile Include="GenericSerializationTests.cs" />
     <Compile Include="MethodBuilderWriteMethodSkeleton.cs" />
     <Compile Include="PerformanceTests.cs" />
+    <Compile Include="ReadMethodTests.cs" />
     <Compile Include="SerializableClass.cs" />
     <Compile Include="SimpleTypesAsObjectSerializationTests.cs" />
     <Compile Include="SimpleTypesSerializatitonTests.cs" />
@@ -73,6 +77,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Text.resx</DependentUpon>
     </Compile>
+    <Compile Include="WriteMethodTests.cs" />
     <Compile Include="WriteVerificationTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -89,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

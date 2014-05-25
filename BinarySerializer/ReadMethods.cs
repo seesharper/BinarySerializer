@@ -1,60 +1,51 @@
 ﻿namespace BinarySerializer
 {
     using System;
-    using System.Collections.Concurrent;    
     using System.Linq;
     using System.Reflection;
+    using System.Reflection.Emit;
 
-    public static class ReadMethods
+    public static class ReadMethods<T>
     {
-        private static readonly MethodInfo OpenGenericReadBinarySerializableObjectMethod;
+        private static readonly Lazy<Func<IReader, T>> Cache = new Lazy<Func<IReader, T>>(CreateReadMethod);
 
-        private static readonly MethodInfo OpenGenericReadCollectionMethod;
-
-
-        private static readonly ConcurrentDictionary<Type, MethodInfo> Methods = new ConcurrentDictionary<Type, MethodInfo>();
-
-        static ReadMethods()
+        public static Func<IReader, T> Get()
         {
-            OpenGenericReadBinarySerializableObjectMethod = typeof(BinarySerializationReader).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m => m.IsGenericMethod && m.Name == "ReadBinarySerializableObject");
-            OpenGenericReadCollectionMethod = typeof(BinarySerializationReader).GetMethod(
-                "ReadCollectionInternal", BindingFlags.NonPublic | BindingFlags.Instance);
+            return Cache.Value;
         }
 
-
-        public static MethodInfo GetReadMethod(Type type)
+        private static Func<IReader, T> CreateReadMethod()
         {
-            return Methods.GetOrAdd(type, ResolveReadMethod);
-        }
+            Type actualType = typeof(T);
 
-        private static MethodInfo ResolveReadMethod(Type type)
-        {
-            MethodInfo methodInfo = typeof(BinarySerializationReader).GetMethods().FirstOrDefault(m => m.ReturnType == type);
-            if (methodInfo != null)
+            if (actualType.IsEnum)
             {
-                return methodInfo;
+                actualType = EnumHelper.GetUnderlyingEnumType(actualType);
             }
 
-            if (typeof(Type).IsAssignableFrom(type))
+
+            MethodInfo methodInfo;
+
+            if (actualType.IsNullable())
             {
-                return typeof(BinarySerializationReader).GetMethod("ReadType");
+                methodInfo = typeof(IDeserializer).GetMethods().FirstOrDefault(m => m.ReturnType == actualType);
             }
+            else
+            {
+                methodInfo = typeof(IReader).GetMethods().FirstOrDefault(m => m.ReturnType == actualType);
+            }
+
+
+            var dynamicMethod = new DynamicMethod("DynamicReadMethod", typeof(T), new[] { typeof(IReader) }, typeof(IReader).Module);
             
 
-            if (typeof(IBinarySerializable).IsAssignableFrom(type))
-            {
-                MethodInfo closedGenericWriteMethod = OpenGenericReadBinarySerializableObjectMethod.MakeGenericMethod(type);
-                return closedGenericWriteMethod;
-            }
+            var il = dynamicMethod.GetILGenerator();
 
-            Type collectionType = type.GetCollectionType();
-            if (collectionType != null)
-            {
-                Type elementType = collectionType.GetGenericArguments().First();
-                return OpenGenericReadCollectionMethod.MakeGenericMethod(type, elementType);
-            }
+            il.Emit(OpCodes.Ldarg_0);            
+            il.Emit(OpCodes.Call, methodInfo);            
+            il.Emit(OpCodes.Ret);
 
-            throw new NotSupportedException();
+            return (Func<IReader, T>)dynamicMethod.CreateDelegate(typeof(Func<IReader, T>));
         }
     }
 }
